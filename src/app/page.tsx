@@ -89,7 +89,7 @@ export default function HomePage() {
     setEstanterias(prevEstanterias =>
       prevEstanterias.map(est =>
         est.id === estanteriaId
-          ? { ...est, looseItems: [...est.looseItems, newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
+          ? { ...est, looseItems: [...(est.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
           : est
       )
     );
@@ -102,7 +102,7 @@ export default function HomePage() {
             est.id === estanteriaId 
             ? {
                 ...est,
-                looseItems: est.looseItems.map(item => 
+                looseItems: (est.looseItems || []).map(item => 
                     item.id === itemId ? { ...item, ...itemData } : item
                 ).sort((a,b)=>a.name.localeCompare(b.name))
               }
@@ -116,13 +116,13 @@ export default function HomePage() {
     let itemName = "El objeto seleccionado";
     const est = estanterias.find(e => e.id === estanteriaId);
     if (est) {
-        const item = est.looseItems.find(i => i.id === itemId);
+        const item = (est.looseItems || []).find(i => i.id === itemId);
         if (item) itemName = item.name;
     }
     setEstanterias(prevEstanterias =>
       prevEstanterias.map(est =>
         est.id === estanteriaId
-          ? { ...est, looseItems: est.looseItems.filter(item => item.id !== itemId) }
+          ? { ...est, looseItems: (est.looseItems || []).filter(item => item.id !== itemId) }
           : est
       )
     );
@@ -136,7 +136,7 @@ export default function HomePage() {
     setEstanterias(prevEstanterias =>
       prevEstanterias.map(est =>
         est.id === estanteriaId
-          ? { ...est, baldas: [...est.baldas, newBalda].sort((a,b) => a.name.localeCompare(b.name)) }
+          ? { ...est, baldas: [...(est.baldas || []), newBalda].sort((a,b) => a.name.localeCompare(b.name)) }
           : est
       )
     );
@@ -145,7 +145,7 @@ export default function HomePage() {
 
   const handleDeleteBalda = (estanteriaId: string, baldaIdToDelete: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaId);
-    const balda = estanteria?.baldas.find(b => b.id === baldaIdToDelete);
+    const balda = (estanteria?.baldas || []).find(b => b.id === baldaIdToDelete);
     if (!balda || !estanteria) return;
 
     const updatedBoxes = boxes.map(box => {
@@ -159,7 +159,7 @@ export default function HomePage() {
     setEstanterias(prevEstanterias =>
       prevEstanterias.map(est =>
         est.id === estanteriaId
-          ? { ...est, baldas: est.baldas.filter(b => b.id !== baldaIdToDelete) }
+          ? { ...est, baldas: (est.baldas || []).filter(b => b.id !== baldaIdToDelete) }
           : est
       )
     );
@@ -177,9 +177,9 @@ export default function HomePage() {
         est.id === estanteriaId
           ? {
               ...est,
-              baldas: est.baldas.map(balda =>
+              baldas: (est.baldas || []).map(balda =>
                 balda.id === baldaId
-                  ? { ...balda, looseItems: [...balda.looseItems, newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
+                  ? { ...balda, looseItems: [...(balda.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
                   : balda
               ),
             }
@@ -195,11 +195,11 @@ export default function HomePage() {
             est.id === estanteriaId 
             ? {
                 ...est,
-                baldas: est.baldas.map(balda => 
+                baldas: (est.baldas || []).map(balda => 
                     balda.id === baldaId
                     ? {
                         ...balda,
-                        looseItems: balda.looseItems.map(item => 
+                        looseItems: (balda.looseItems || []).map(item => 
                             item.id === itemId ? { ...item, ...itemData } : item
                         ).sort((a,b)=>a.name.localeCompare(b.name))
                       }
@@ -215,9 +215,9 @@ export default function HomePage() {
   const handleDeleteLooseItemFromBalda = (estanteriaId: string, baldaId: string, itemId: string) => {
     let itemName = "El objeto seleccionado";
     const est = estanterias.find(e => e.id === estanteriaId);
-    const balda = est?.baldas.find(b => b.id === baldaId);
+    const balda = (est?.baldas || []).find(b => b.id === baldaId);
     if (balda) {
-        const item = balda.looseItems.find(i => i.id === itemId);
+        const item = (balda.looseItems || []).find(i => i.id === itemId);
         if (item) itemName = item.name;
     }
     setEstanterias(prevEstanterias =>
@@ -225,9 +225,9 @@ export default function HomePage() {
         est.id === estanteriaId
           ? {
               ...est,
-              baldas: est.baldas.map(balda =>
+              baldas: (est.baldas || []).map(balda =>
                 balda.id === baldaId
-                  ? { ...balda, looseItems: balda.looseItems.filter(item => item.id !== itemId) }
+                  ? { ...balda, looseItems: (balda.looseItems || []).filter(item => item.id !== itemId) }
                   : balda
               ),
             }
@@ -306,7 +306,7 @@ export default function HomePage() {
     let locationDescription: string;
 
     if (baldaId) {
-      const balda = estanteria.baldas.find(b => b.id === baldaId);
+      const balda = (estanteria.baldas || []).find(b => b.id === baldaId);
       if (!balda) {
         toast({ title: "Error", description: "Balda no encontrada.", variant: "destructive"});
         return;
@@ -358,7 +358,7 @@ export default function HomePage() {
 
   const selectedBalda = useMemo(() => {
     if (sidebarSelection.type === 'balda' && selectedEstanteria) {
-      return selectedEstanteria.baldas.find(b => b.id === sidebarSelection.id);
+      return (selectedEstanteria.baldas || []).find(b => b.id === sidebarSelection.id);
     }
     return null;
   }, [selectedEstanteria, sidebarSelection]);
@@ -387,13 +387,12 @@ export default function HomePage() {
   const filteredEstanterias = useMemo(() => {
     if (!filter) return sortedEstanterias;
     const lowerFilter = filter.toLowerCase();
-    // Also filter by items/boxes within estanterias/baldas if estanteria/balda name doesn't match
     return sortedEstanterias.filter(e => 
       e.name.toLowerCase().includes(lowerFilter) ||
-      e.looseItems.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
-      e.baldas.some(b => 
+      (e.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
+      (e.baldas || []).some(b => 
         b.name.toLowerCase().includes(lowerFilter) || 
-        b.looseItems.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
+        (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
         sortedBoxes.some(box => box.location?.baldaId === b.id && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))))
       ) ||
       sortedBoxes.some(box => box.location?.estanteriaId === e.id && !box.location?.baldaId && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))))
@@ -411,19 +410,19 @@ export default function HomePage() {
   
   const filteredBaldasInSelectedEstanteria = useMemo(() => {
     if (!selectedEstanteria) return [];
-    const baldas = selectedEstanteria.baldas.sort((a,b) => a.name.localeCompare(b.name));
+    const baldas = (selectedEstanteria.baldas || []).sort((a,b) => a.name.localeCompare(b.name));
     if (!filter) return baldas;
     const lowerFilter = filter.toLowerCase();
     return baldas.filter(b => 
       b.name.toLowerCase().includes(lowerFilter) ||
-      b.looseItems.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
+      (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
       boxesOnSelectedBalda.filter(box => box.location?.baldaId === b.id).some(box => box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)))
     );
   }, [selectedEstanteria, filter, boxesOnSelectedBalda]);
 
   const filteredLooseItemsOnSelectedBalda = useMemo(() => {
     if (!selectedBalda) return [];
-    const items = selectedBalda.looseItems.sort((a,b) => a.name.localeCompare(b.name));
+    const items = (selectedBalda.looseItems || []).sort((a,b) => a.name.localeCompare(b.name));
     if (!filter) return items;
     const lowerFilter = filter.toLowerCase();
     return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter));
@@ -441,7 +440,7 @@ export default function HomePage() {
 
   const filteredLooseItemsOnSelectedEstanteria = useMemo(() => {
     if (!selectedEstanteria) return [];
-    const items = selectedEstanteria.looseItems.sort((a,b) => a.name.localeCompare(b.name));
+    const items = (selectedEstanteria.looseItems || []).sort((a,b) => a.name.localeCompare(b.name));
     if (!filter) return items;
     const lowerFilter = filter.toLowerCase();
     return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter));
@@ -492,11 +491,12 @@ export default function HomePage() {
         doc.setFontSize(10);
 
         // Loose items on Estanteria
-        if (est.looseItems.length > 0) {
+        const estLooseItems = est.looseItems || [];
+        if (estLooseItems.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.text("  Objetos Sueltos (en Estantería):", 20, yPosition); yPosition += 5;
           doc.setFont(undefined, 'normal');
-          est.looseItems.forEach(item => {
+          estLooseItems.forEach(item => {
             if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
             doc.text(`    - ${item.name}${item.description ? ` (${item.description})` : ''} ${item.borrowedTo ? `(Prestado a: ${item.borrowedTo})` : '(Disponible)'}`, 25, yPosition);
             yPosition += 5;
@@ -525,11 +525,12 @@ export default function HomePage() {
         }
 
         // Baldas
-        if (est.baldas.length > 0) {
+        const estBaldas = est.baldas || [];
+        if (estBaldas.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.text("  Baldas:", 20, yPosition); yPosition += 5;
           doc.setFont(undefined, 'normal');
-          est.baldas.forEach(balda => {
+          estBaldas.forEach(balda => {
             if (yPosition > pageHeight - bottomMargin - 20) { doc.addPage(); yPosition = 15; }
             doc.setFontSize(12);
             doc.setFont(undefined, 'bold');
@@ -537,9 +538,10 @@ export default function HomePage() {
             yPosition += 6;
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
-            if (balda.looseItems.length > 0) {
+            const baldaLooseItems = balda.looseItems || [];
+            if (baldaLooseItems.length > 0) {
               doc.text("      Objetos Sueltos (en Balda):", 30, yPosition); yPosition += 5;
-              balda.looseItems.forEach(item => {
+              baldaLooseItems.forEach(item => {
                 if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
                 doc.text(`        - ${item.name}${item.description ? ` (${item.description})` : ''} ${item.borrowedTo ? `(Prestado a: ${item.borrowedTo})` : '(Disponible)'}`, 35, yPosition);
                 yPosition += 5;
@@ -563,14 +565,14 @@ export default function HomePage() {
                 }
               });
             }
-            if (balda.looseItems.length === 0 && boxesOnThisBalda.length === 0) {
+            if (baldaLooseItems.length === 0 && boxesOnThisBalda.length === 0) {
               doc.setFont(undefined, 'italic');
               doc.text("      (Esta balda está vacía)", 30, yPosition); yPosition += 5;
               doc.setFont(undefined, 'normal');
             }
           });
         }
-         if (est.looseItems.length === 0 && boxesDirectlyOnEstanteria.length === 0 && est.baldas.length === 0) {
+         if (estLooseItems.length === 0 && boxesDirectlyOnEstanteria.length === 0 && estBaldas.length === 0) {
             doc.setFont(undefined, 'italic');
             doc.text("  (Esta estantería está vacía)", 20, yPosition); yPosition += 5;
             doc.setFont(undefined, 'normal');
@@ -741,7 +743,7 @@ export default function HomePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos ({filteredLooseItemsOnSelectedBalda.length})</h3>
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos ({(filteredLooseItemsOnSelectedBalda || []).length})</h3>
               {filteredLooseItemsOnSelectedBalda.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredLooseItemsOnSelectedBalda.map(item => (
@@ -758,7 +760,7 @@ export default function HomePage() {
             </div>
             <hr/>
             <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas Asignadas ({filteredBoxesOnSelectedBalda.length})</h3>
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas Asignadas ({(filteredBoxesOnSelectedBalda || []).length})</h3>
               {filteredBoxesOnSelectedBalda.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredBoxesOnSelectedBalda.map(box => (
@@ -800,13 +802,13 @@ export default function HomePage() {
               </div>
             </CardTitle>
             <CardDescription>
-                {selectedEstanteria.looseItems.length} objeto(s) suelto(s) directo(s), {boxesOnSelectedEstanteriaDirectly.length} caja(s) directa(s), {selectedEstanteria.baldas.length} balda(s).
+                {(selectedEstanteria.looseItems || []).length} objeto(s) suelto(s) directo(s), {boxesOnSelectedEstanteriaDirectly.length} caja(s) directa(s), {(selectedEstanteria.baldas || []).length} balda(s).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
              {/* Loose Items Directly on Estanteria */}
             <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos en Estantería ({filteredLooseItemsOnSelectedEstanteria.length})</h3>
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos en Estantería ({(filteredLooseItemsOnSelectedEstanteria || []).length})</h3>
               {filteredLooseItemsOnSelectedEstanteria.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredLooseItemsOnSelectedEstanteria.map(item => (
@@ -824,7 +826,7 @@ export default function HomePage() {
             <hr/>
             {/* Boxes Directly on Estanteria */}
             <div>
-              <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas en Estantería ({filteredBoxesOnSelectedEstanteriaDirectly.length})</h3>
+              <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas en Estantería ({(filteredBoxesOnSelectedEstanteriaDirectly || []).length})</h3>
               {filteredBoxesOnSelectedEstanteriaDirectly.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredBoxesOnSelectedEstanteriaDirectly.map(box => (
@@ -845,7 +847,7 @@ export default function HomePage() {
             <hr/>
             {/* Baldas */}
             <div>
-                <h3 className="text-xl font-semibold mb-3 flex items-center"><Layers className="mr-2 h-5 w-5 text-primary"/>Baldas ({filteredBaldasInSelectedEstanteria.length})</h3>
+                <h3 className="text-xl font-semibold mb-3 flex items-center"><Layers className="mr-2 h-5 w-5 text-primary"/>Baldas ({(filteredBaldasInSelectedEstanteria || []).length})</h3>
                 {filteredBaldasInSelectedEstanteria.length > 0 ? (
                 <div className="space-y-4">
                     {filteredBaldasInSelectedEstanteria.map(balda => (
@@ -878,7 +880,7 @@ export default function HomePage() {
                             </AlertDialog>
                         </div>
                         <CardDescription className="pt-1">
-                            {balda.looseItems.length} objeto(s) suelto(s). {boxes.filter(b => b.location?.baldaId === balda.id && b.location?.estanteriaId === selectedEstanteria!.id).length} caja(s) asignada(s).
+                            {(balda.looseItems || []).length} objeto(s) suelto(s). {boxes.filter(b => b.location?.baldaId === balda.id && b.location?.estanteriaId === selectedEstanteria!.id).length} caja(s) asignada(s).
                         </CardDescription>
                         </CardHeader>
                         <CardContent className="px-4 pb-3">
@@ -937,7 +939,7 @@ export default function HomePage() {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                    <CardDescription className="pt-1">{est.looseItems.length} obj. suelto(s), {boxes.filter(b => b.location?.estanteriaId === est.id && !b.location?.baldaId).length} caja(s) directa(s), {est.baldas.length} balda(s)</CardDescription>
+                    <CardDescription className="pt-1">{(est.looseItems || []).length} obj. suelto(s), {boxes.filter(b => b.location?.estanteriaId === est.id && !b.location?.baldaId).length} caja(s) directa(s), {(est.baldas || []).length} balda(s)</CardDescription>
                   </CardHeader>
                   <CardContent>
                      <Button size="sm" variant="outline" onClick={() => setSidebarSelection({type: 'estanteria', id: est.id, name: est.name, estanteriaId: est.id })}>
@@ -1065,3 +1067,4 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
+
