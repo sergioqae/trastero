@@ -10,7 +10,7 @@ import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -29,6 +29,7 @@ import { AssignBoxDialog } from "@/components/AssignBoxDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemCard } from "@/components/ItemCard";
 import { EditItemDialog } from "@/components/EditItemDialog";
+import { EditNameDialog } from "@/components/EditNameDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,13 +63,35 @@ export default function HomePage() {
     toast({ title: "Estantería Creada", description: `La estantería "${newEstanteria.name}" ha sido creada.` });
   };
 
+  const handleUpdateEstanteriaName = (estanteriaId: string, newName: string) => {
+    const oldEstanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!oldEstanteria) return;
+
+    setEstanterias(prev => 
+      prev.map(e => 
+        e.id === estanteriaId ? { ...e, name: newName } : e
+      ).sort((a,b) => a.name.localeCompare(b.name))
+    );
+    setBoxes(prevBoxes => 
+      prevBoxes.map(b => 
+        b.location?.estanteriaId === estanteriaId ? { ...b, location: { ...b.location, estanteriaName: newName } } : b
+      )
+    );
+    if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
+      setSidebarSelection(prev => ({ ...prev, name: newName }));
+    } else if (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaId) {
+       // If a balda of this estanteria is selected, its title will update via selectedEstanteria dependency
+    }
+    toast({ title: "Estantería Actualizada", description: `Nombre cambiado a "${newName}".` });
+  };
+
   const handleDeleteEstanteria = (estanteriaIdToDelete: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaIdToDelete);
     if (!estanteria) return;
 
     const updatedBoxes = boxes.map(box => {
       if (box.location?.estanteriaId === estanteriaIdToDelete) {
-        return { ...box, location: null }; // Unassign boxes from this estanteria (baldas or direct)
+        return { ...box, location: null }; 
       }
       return box;
     });
@@ -141,6 +164,32 @@ export default function HomePage() {
       )
     );
     toast({ title: "Balda Creada", description: `La balda "${newBalda.name}" ha sido añadida.` });
+  };
+
+  const handleUpdateBaldaName = (estanteriaId: string, baldaId: string, newName: string) => {
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+    const oldBalda = (estanteria.baldas || []).find(b => b.id === baldaId);
+    if (!oldBalda) return;
+
+    setEstanterias(prev => 
+        prev.map(est => 
+            est.id === estanteriaId 
+            ? { ...est, baldas: (est.baldas || []).map(b => b.id === baldaId ? { ...b, name: newName } : b).sort((a,b) => a.name.localeCompare(b.name)) } 
+            : est
+        )
+    );
+    setBoxes(prevBoxes => 
+      prevBoxes.map(b => 
+        (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId) 
+        ? { ...b, location: { ...b.location, baldaName: newName } } 
+        : b
+      )
+    );
+    if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
+      setSidebarSelection(prev => ({ ...prev, name: newName }));
+    }
+    toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
   const handleDeleteBalda = (estanteriaId: string, baldaIdToDelete: string) => {
@@ -242,6 +291,18 @@ export default function HomePage() {
     const newBox: Box = { ...boxData, id: crypto.randomUUID(), items: [], location: null };
     setBoxes(prevBoxes => [newBox, ...prevBoxes].sort((a, b) => a.name.localeCompare(b.name)));
     toast({ title: "Caja Creada", description: `La caja "${newBox.name}" ha sido creada.` });
+  };
+
+  const handleUpdateBoxName = (boxId: string, newName: string) => {
+    setBoxes(prev => 
+      prev.map(b => 
+        b.id === boxId ? { ...b, name: newName } : b
+      ).sort((a,b) => a.name.localeCompare(b.name))
+    );
+    if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
+      setSidebarSelection(prev => ({ ...prev, name: newName }));
+    }
+    toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
   const handleDeleteBox = (boxIdToDelete: string) => {
@@ -648,6 +709,7 @@ export default function HomePage() {
           onUpdateItem={handleUpdateItemInBox}
           onDeleteItem={handleDeleteItemFromBox}
           onDeleteBox={handleDeleteBox}
+          onUpdateBoxName={handleUpdateBoxName}
           onUnassignBox={handleUnassignBox}
           totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
         />
@@ -668,6 +730,7 @@ export default function HomePage() {
                     onUpdateItem={handleUpdateItemInBox}
                     onDeleteItem={handleDeleteItemFromBox}
                     onDeleteBox={handleDeleteBox}
+                    onUpdateBoxName={handleUpdateBoxName}
                     onUnassignBox={handleUnassignBox}
                     totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
                     />
@@ -702,6 +765,7 @@ export default function HomePage() {
                     onUpdateItem={handleUpdateItemInBox}
                     onDeleteItem={handleDeleteItemFromBox}
                     onDeleteBox={handleDeleteBox}
+                    onUpdateBoxName={handleUpdateBoxName}
                     onUnassignBox={handleUnassignBox}
                     totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
                     />
@@ -727,7 +791,14 @@ export default function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
-              <span>Contenido de Balda: {selectedBalda.name}</span>
+                <div className="flex items-center gap-2">
+                    <span>Contenido de Balda: {selectedBalda.name}</span>
+                    <EditNameDialog
+                        currentName={selectedBalda.name}
+                        itemTypeForTitle="Balda"
+                        onSave={(newName) => handleUpdateBaldaName(selectedEstanteria.id, selectedBalda.id, newName)}
+                    />
+                </div>
               <div className="flex gap-2">
                  <AddLooseItemDialog estanteriaId={selectedEstanteria.id} baldaId={selectedBalda.id} onAddItem={handleAddLooseItemToBalda} />
                  <AssignBoxDialog
@@ -750,7 +821,7 @@ export default function HomePage() {
                     <ItemCard 
                         key={item.id} 
                         item={item} 
-                        boxId={selectedBalda!.id} 
+                        boxId={selectedBalda!.id} // Context is baldaId for loose items on balda
                         onUpdateItem={(baldaId, itemId, itemData) => handleUpdateLooseItemOnBalda(selectedEstanteria!.id, baldaId, itemId, itemData)}
                         onDeleteItem={(baldaId, itemId) => handleDeleteLooseItemFromBalda(selectedEstanteria!.id, baldaId, itemId)}
                     />
@@ -771,6 +842,7 @@ export default function HomePage() {
                         onUpdateItem={handleUpdateItemInBox}
                         onDeleteItem={handleDeleteItemFromBox}
                         onDeleteBox={handleDeleteBox}
+                        onUpdateBoxName={handleUpdateBoxName}
                         onUnassignBox={handleUnassignBox}
                         totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
                       />
@@ -788,12 +860,18 @@ export default function HomePage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
-              <span>Contenido de Estantería: {selectedEstanteria.name}</span>
+                <div className="flex items-center gap-2">
+                    <span>Contenido de Estantería: {selectedEstanteria.name}</span>
+                     <EditNameDialog
+                        currentName={selectedEstanteria.name}
+                        itemTypeForTitle="Estantería"
+                        onSave={(newName) => handleUpdateEstanteriaName(selectedEstanteria.id, newName)}
+                    />
+                </div>
               <div className="flex flex-wrap gap-2">
                 <AddLooseItemToEstanteriaDialog estanteriaId={selectedEstanteria.id} onAddItem={handleAddLooseItemToEstanteria} />
                 <AssignBoxDialog
                     estanteriaId={selectedEstanteria.id}
-                    // baldaId is null/undefined for direct assignment to estanteria
                     onAssignBox={handleAssignBoxToLocation}
                     boxes={unassignedBoxes}
                     triggerText="Asignar Caja a Estantería"
@@ -806,7 +884,6 @@ export default function HomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-             {/* Loose Items Directly on Estanteria */}
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos en Estantería ({(filteredLooseItemsOnSelectedEstanteria || []).length})</h3>
               {filteredLooseItemsOnSelectedEstanteria.length > 0 ? (
@@ -815,7 +892,7 @@ export default function HomePage() {
                     <ItemCard 
                         key={item.id} 
                         item={item} 
-                        boxId={selectedEstanteria!.id} // Context is estanteriaId
+                        boxId={selectedEstanteria!.id} 
                         onUpdateItem={(estanteriaId, itemId, itemData) => handleUpdateLooseItemOnEstanteria(estanteriaId, itemId, itemData)}
                         onDeleteItem={(estanteriaId, itemId) => handleDeleteLooseItemFromEstanteria(estanteriaId, itemId)}
                     />
@@ -824,7 +901,6 @@ export default function HomePage() {
               ) : <p className="text-muted-foreground">{filter ? "No hay objetos sueltos que coincidan." : "No hay objetos sueltos directamente en esta estantería."}</p>}
             </div>
             <hr/>
-            {/* Boxes Directly on Estanteria */}
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas en Estantería ({(filteredBoxesOnSelectedEstanteriaDirectly || []).length})</h3>
               {filteredBoxesOnSelectedEstanteriaDirectly.length > 0 ? (
@@ -837,6 +913,7 @@ export default function HomePage() {
                         onUpdateItem={handleUpdateItemInBox}
                         onDeleteItem={handleDeleteItemFromBox}
                         onDeleteBox={handleDeleteBox}
+                        onUpdateBoxName={handleUpdateBoxName}
                         onUnassignBox={handleUnassignBox}
                         totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
                       />
@@ -845,7 +922,6 @@ export default function HomePage() {
               ) : <p className="text-muted-foreground">{filter ? "No hay cajas que coincidan." : "No hay cajas directamente en esta estantería."}</p>}
             </div>
             <hr/>
-            {/* Baldas */}
             <div>
                 <h3 className="text-xl font-semibold mb-3 flex items-center"><Layers className="mr-2 h-5 w-5 text-primary"/>Baldas ({(filteredBaldasInSelectedEstanteria || []).length})</h3>
                 {filteredBaldasInSelectedEstanteria.length > 0 ? (
@@ -854,9 +930,16 @@ export default function HomePage() {
                     <Card key={balda.id} className="hover:shadow-md transition-shadow">
                         <CardHeader className="py-3 px-4">
                         <div className="flex justify-between items-center">
-                            <Button variant="link" className="p-0 h-auto text-lg" onClick={() => setSidebarSelection({type: 'balda', id: balda.id, estanteriaId: selectedEstanteria!.id, name: balda.name})}>
-                            <Layers className="mr-2 h-5 w-5 text-primary"/>{balda.name}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="link" className="p-0 h-auto text-lg" onClick={() => setSidebarSelection({type: 'balda', id: balda.id, estanteriaId: selectedEstanteria!.id, name: balda.name})}>
+                                <Layers className="mr-2 h-5 w-5 text-primary"/>{balda.name}
+                                </Button>
+                                <EditNameDialog
+                                    currentName={balda.name}
+                                    itemTypeForTitle="Balda"
+                                    onSave={(newName) => handleUpdateBaldaName(selectedEstanteria!.id, balda.id, newName)}
+                                />
+                            </div>
                             <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -914,9 +997,16 @@ export default function HomePage() {
                 <Card key={est.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-center">
-                       <Button variant="link" className="p-0 h-auto text-xl" onClick={() => setSidebarSelection({type: 'estanteria', id: est.id, name: est.name, estanteriaId: est.id })}>
-                         <Server className="mr-2 h-6 w-6 text-primary"/>{est.name}
-                       </Button>
+                        <div className="flex items-center gap-2">
+                            <Button variant="link" className="p-0 h-auto text-xl" onClick={() => setSidebarSelection({type: 'estanteria', id: est.id, name: est.name, estanteriaId: est.id })}>
+                                <Server className="mr-2 h-6 w-6 text-primary"/>{est.name}
+                            </Button>
+                            <EditNameDialog
+                                currentName={est.name}
+                                itemTypeForTitle="Estantería"
+                                onSave={(newName) => handleUpdateEstanteriaName(est.id, newName)}
+                            />
+                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                            <Button variant="destructive" size="icon">
@@ -971,6 +1061,7 @@ export default function HomePage() {
                   onUpdateItem={handleUpdateItemInBox}
                   onDeleteItem={handleDeleteItemFromBox}
                   onDeleteBox={handleDeleteBox}
+                  onUpdateBoxName={handleUpdateBoxName}
                   onUnassignBox={handleUnassignBox}
                   totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
                 />
@@ -1033,11 +1124,6 @@ export default function HomePage() {
                     Exportar Inventario
                   </Button>
                   {sidebarSelection.type === 'all-estanterias' && <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />}
-                  {sidebarSelection.type === 'estanteria' && selectedEstanteria && (
-                    <>
-                        {/* Buttons for selected estanteria are now inside its CardHeader in renderContent */}
-                    </>
-                  )}
                   { (sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || sidebarSelection.type === 'all-estanterias') && <CreateBoxDialog onCreateBox={handleCreateBox} />}
                 </div>
               </div>

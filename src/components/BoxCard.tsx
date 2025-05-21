@@ -11,9 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Archive, Trash2, CornerLeftUp } from "lucide-react";
+import { Archive, Trash2, CornerLeftUp, Edit3 } from "lucide-react";
 import { ItemCard } from "./ItemCard";
 import { AddItemDialog } from "./AddItemDialog";
+import { EditNameDialog } from "./EditNameDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ interface BoxCardProps {
   onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
+  onUpdateBoxName: (boxId: string, newName: string) => void;
   onUnassignBox?: (boxId: string) => void;
   isFilteredView?: boolean; 
   totalItemsInBoxOriginal: number; 
@@ -43,6 +45,7 @@ export function BoxCard({
     onUpdateItem, 
     onDeleteItem, 
     onDeleteBox, 
+    onUpdateBoxName,
     onUnassignBox,
     isFilteredView, 
     totalItemsInBoxOriginal 
@@ -67,18 +70,24 @@ export function BoxCard({
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70 flex flex-col">
       <CardHeader className="border-b">
-        <div className="flex items-start justify-between gap-2"> {/* Main flex row for header content */}
-          <div className="min-w-0 flex-1 mr-2"> {/* Title block: allow to shrink and take available space */}
-            <CardTitle className="text-2xl flex items-center">
-              <Archive className="mr-3 h-7 w-7 text-primary flex-shrink-0" /> {/* Icon container */}
-              <span className="truncate">{box.name}</span> {/* Truncate box name */}
-            </CardTitle>
-            <CardDescription className="pt-1 text-xs truncate"> {/* Truncate location text */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 mr-2">
+            <div className="flex items-center gap-2">
+                <CardTitle className="text-2xl flex items-center">
+                    <Archive className="mr-3 h-7 w-7 text-primary flex-shrink-0" />
+                    <span className="truncate">{box.name}</span>
+                </CardTitle>
+                <EditNameDialog
+                    currentName={box.name}
+                    itemTypeForTitle="Caja"
+                    onSave={(newName) => onUpdateBoxName(box.id, newName)}
+                />
+            </div>
+            <CardDescription className="pt-1 text-xs truncate">
               {locationText}
             </CardDescription>
           </div>
-          {/* Actions block */}
-          <div className="flex items-center space-x-2 flex-shrink-0"> {/* Ensure this block doesn't shrink */}
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <AddItemDialog boxId={box.id} onAddItem={onAddItem} />
             <AlertDialog>
               <AlertDialogTrigger asChild>
