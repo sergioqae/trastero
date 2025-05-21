@@ -1,18 +1,20 @@
 
 "use client";
 
-import type { Box, Item } from "@/lib/types";
+import type { Box, Item, Estanteria, Balda } from "@/lib/types";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Box as BoxIcon, Trash2 } from "lucide-react";
+import { Archive, Trash2, IterationCcw, CornerLeftUp } from "lucide-react"; // Changed BoxIcon to Archive
 import { ItemCard } from "./ItemCard";
 import { AddItemDialog } from "./AddItemDialog";
+import { AssignBoxDialog } from "./AssignBoxDialog"; // For re-assigning
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,15 +33,30 @@ interface BoxCardProps {
   onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
+  onUnassignBox?: (boxId: string) => void; // Make optional if not always needed
+  onAssignBoxToBalda?: (boxId: string, estanteriaId: string, baldaId: string) => void; // For re-assigning
+  estanterias?: Estanteria[]; // For AssignBoxDialog if re-assigning
   isFilteredView?: boolean; 
   totalItemsInBoxOriginal: number; 
 }
 
-export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBox, isFilteredView, totalItemsInBoxOriginal }: BoxCardProps) {
+export function BoxCard({ 
+    box, 
+    onAddItem, 
+    onUpdateItem, 
+    onDeleteItem, 
+    onDeleteBox, 
+    onUnassignBox,
+    onAssignBoxToBalda,
+    estanterias,
+    isFilteredView, 
+    totalItemsInBoxOriginal 
+}: BoxCardProps) {
   const itemsToShow = box.items;
   
   let descriptionText = `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`;
   if (isFilteredView) {
+    // This part might need adjustment based on how filtering is applied to boxes within baldas/estanterias
     if (itemsToShow.length !== totalItemsInBoxOriginal) {
       descriptionText = `${itemsToShow.length} de ${totalItemsInBoxOriginal} objeto(s) coincidente(s).`;
     } else if (totalItemsInBoxOriginal > 0) {
@@ -49,16 +66,24 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
     }
   }
 
+  const locationText = box.location 
+    ? `Ubicación: ${box.location.estanteriaName} > ${box.location.baldaName}`
+    : "Sin ubicar";
 
   return (
-    <Card className="w-full shadow-lg bg-card border border-border/70">
+    <Card className="w-full shadow-lg bg-card border border-border/70 flex flex-col">
       <CardHeader className="border-b">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl flex items-center">
-            <BoxIcon className="mr-3 h-7 w-7 text-primary" />
-            {box.name}
-          </CardTitle>
-          <div className="flex items-center space-x-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-2xl flex items-center">
+              <Archive className="mr-3 h-7 w-7 text-primary" />
+              {box.name}
+            </CardTitle>
+            <CardDescription className="pt-1 text-xs">
+              {locationText}
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2 flex-shrink-0">
             <AddItemDialog boxId={box.id} onAddItem={onAddItem} />
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -87,13 +112,13 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
             </AlertDialog>
           </div>
         </div>
-        <CardDescription className="pt-1">
+        <CardDescription className="pt-2">
           {descriptionText}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-6 flex-grow">
         {itemsToShow.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Adjusted for potentially less space */}
             {itemsToShow.map((item) => (
               <ItemCard
                 key={item.id}
@@ -106,12 +131,24 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
           </div>
         ) : (
           <p className="text-muted-foreground text-center py-4">
-            {isFilteredView ? "No hay objetos coincidentes con el filtro en esta caja." : "Esta caja está vacía. ¡Añade algunos objetos!"}
+            {isFilteredView && !itemsToShow.length ? "No hay objetos coincidentes con el filtro en esta caja." : "Esta caja está vacía. ¡Añade algunos objetos!"}
           </p>
         )}
       </CardContent>
+      { (onUnassignBox && box.location) && (
+        <CardFooter className="border-t pt-4">
+            <Button variant="outline" size="sm" onClick={() => onUnassignBox(box.id)}>
+                <CornerLeftUp className="mr-2 h-4 w-4"/> Desasignar de Balda
+            </Button>
+        </CardFooter>
+      )}
+      {/* Placeholder for re-assigning if needed directly from box card - complex UI
+      { onAssignBoxToBalda && estanterias && !box.location && (
+         <CardFooter className="border-t pt-4">
+            <AssignBoxDialog estanteriaId="" baldaId="" boxes={[box]} onAssignBox={(boxId, estId, balId) => onAssignBoxToBalda(boxId, estId, balId)} />
+         </CardFooter>
+      )}
+      */}
     </Card>
   );
 }
-
-    
