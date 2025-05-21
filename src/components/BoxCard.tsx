@@ -31,12 +31,24 @@ interface BoxCardProps {
   onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
-  isFilteredView?: boolean; // To adjust display if items are filtered
+  isFilteredView?: boolean; 
+  totalItemsInBoxOriginal: number; 
 }
 
-export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBox, isFilteredView }: BoxCardProps) {
+export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBox, isFilteredView, totalItemsInBoxOriginal }: BoxCardProps) {
   const itemsToShow = box.items;
-  const totalItemsInBoxBeforeFilter = box.items.length; // This might need to come from original box if items are pre-filtered
+  
+  let descriptionText = `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`;
+  if (isFilteredView) {
+    if (itemsToShow.length !== totalItemsInBoxOriginal) {
+      descriptionText = `${itemsToShow.length} de ${totalItemsInBoxOriginal} objeto(s) coincidente(s).`;
+    } else if (totalItemsInBoxOriginal > 0) {
+       descriptionText = `Todos los ${totalItemsInBoxOriginal} objeto(s) coinciden.`;
+    } else {
+       descriptionText = "Esta caja está vacía y coincide con el filtro.";
+    }
+  }
+
 
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70">
@@ -76,10 +88,7 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
           </div>
         </div>
         <CardDescription className="pt-1">
-          {isFilteredView && itemsToShow.length !== totalItemsInBoxBeforeFilter 
-            ? `${itemsToShow.length} objeto(s) coincidente(s) en esta caja.`
-            : `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`
-          }
+          {descriptionText}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">

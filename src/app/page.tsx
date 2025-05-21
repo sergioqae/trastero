@@ -10,7 +10,7 @@ import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Package2 as AppLogoIcon } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -109,7 +109,9 @@ export default function HomePage() {
 
     return candidateBoxes
       .map(box => {
-        const matchingItems = box.items.filter(
+        const itemsInBox = selectedBoxId && box.id === selectedBoxId ? box.items : box.items; // Use all items if filtering globally, or items from selected box
+        
+        const matchingItems = itemsInBox.filter(
           item =>
             item.name.toLowerCase().includes(lowercasedFilter) ||
             item.description.toLowerCase().includes(lowercasedFilter) ||
@@ -117,11 +119,17 @@ export default function HomePage() {
         );
 
         const boxNameMatches = box.name.toLowerCase().includes(lowercasedFilter);
+        
+        if (selectedBoxId && box.id === selectedBoxId) { // If a box is selected, only filter its items
+            return matchingItems.length > 0 || boxNameMatches ? { ...box, items: matchingItems } : { ...box, items: [] } // show box, but items can be empty
+        }
+
 
         if (boxNameMatches || matchingItems.length > 0) {
           return {
             ...box,
-            items: matchingItems, // Show only matching items if filter is active
+            // If filtering globally and box name matches, show all its items or just matching if not box name match
+            items: boxNameMatches && !selectedBoxId ? box.items : matchingItems,
           };
         }
         return null;
@@ -202,14 +210,14 @@ export default function HomePage() {
   let emptyStateTitle = "¡Aún no hay cajas!";
   let emptyStateDescription = "Crea tu primera caja para empezar.";
 
-  if (boxes.length > 0) { // Boxes exist
-    if (selectedBoxId && boxesToDisplay.length === 0 && filter) { // A box is selected, but filter yields no items
+  if (boxes.length > 0) { 
+    if (selectedBoxId && boxesToDisplay.length === 0 && filter) { 
       emptyStateTitle = `No se encontraron objetos en "${selectedBox?.name}"`;
       emptyStateDescription = "Intenta ajustar tu filtro.";
-    } else if (!selectedBoxId && boxesToDisplay.length === 0 && filter) { // No box selected, global filter yields no results
+    } else if (!selectedBoxId && boxesToDisplay.length === 0 && filter) { 
       emptyStateTitle = "No se encontraron cajas u objetos";
       emptyStateDescription = "Intenta ajustar tu filtro o añade nuevos objetos.";
-    } else if (selectedBoxId && boxesToDisplay.length > 0 && boxesToDisplay[0].items.length === 0 && !filter) { // Selected box is empty (no filter applied)
+    } else if (selectedBoxId && boxesToDisplay.length > 0 && boxesToDisplay[0].items.length === 0 && !filter) { 
         emptyStateTitle = `"${selectedBox?.name}" está vacía`;
         emptyStateDescription = "Añade algunos objetos a esta caja.";
     }
@@ -224,10 +232,9 @@ export default function HomePage() {
           <Sidebar side="left" collapsible="icon" className="border-r">
             <SidebarHeader className="p-2 flex justify-between items-center">
               <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden" onClick={() => setSelectedBoxId(null)}>
-                {/* <AppLogoIcon className="h-6 w-6 text-primary" /> */}
                 <span className="font-semibold text-lg text-sidebar-foreground">Cajas</span>
               </Link>
-              <SidebarTrigger className="hidden sm:flex group-data-[collapsible=icon]:flex" />
+              <SidebarTrigger className="hidden md:flex" /> {/* Desktop trigger */}
             </SidebarHeader>
             <AppSidebar boxes={boxes} selectedBoxId={selectedBoxId} onSelectBox={setSelectedBoxId} />
           </Sidebar>
@@ -235,7 +242,7 @@ export default function HomePage() {
             <main className="flex-1 container mx-auto py-8 px-4">
               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <div className="flex items-center gap-2">
-                  <SidebarTrigger className="sm:hidden" /> {/* Mobile trigger */}
+                  <SidebarTrigger className="md:hidden" /> {/* Mobile trigger */}
                   <h1 className="text-3xl font-bold text-foreground">{pageTitle}</h1>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
@@ -276,11 +283,17 @@ export default function HomePage() {
                         onDeleteItem={handleDeleteItem}
                         onDeleteBox={handleDeleteBox}
                         isFilteredView={!!filter && (!selectedBoxId || (selectedBoxId && box.id === selectedBoxId))}
+                        totalItemsInBoxOriginal={boxes.find(b => b.id === box.id)?.items.length || 0}
                       />
                     ))}
                   </div>
                 ) : (
-                  <ListView boxes={boxesToDisplay} isFilteredView={!!filter} />
+                   <ListView 
+                      boxes={boxesToDisplay} 
+                      isFilteredView={!!filter} 
+                      allItemsCount={boxes.reduce((acc, curr) => acc + curr.items.length, 0)}
+                      selectedBoxName={selectedBox?.name}
+                    />
                 )
               ) : (
                 <div className="text-center py-12">
