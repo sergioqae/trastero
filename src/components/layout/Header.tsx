@@ -1,18 +1,11 @@
 
 "use client";
-import { Package2, LogIn, LogOut } from 'lucide-react';
+import { Package2 } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import type { User } from 'firebase/auth';
+// Firebase User import and Button were removed
+// Props related to user, login, logout, loadingAuth were removed
 
-interface HeaderProps {
-  user: User | null;
-  onLogin: () => void;
-  onLogout: () => void;
-  loadingAuth: boolean;
-}
-
-export function Header({ user, onLogin, onLogout, loadingAuth }: HeaderProps) {
+export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
@@ -22,28 +15,7 @@ export function Header({ user, onLogin, onLogout, loadingAuth }: HeaderProps) {
             Gestor de Trasteros
           </span>
         </Link>
-        <div className="flex items-center gap-2">
-          {loadingAuth ? (
-            <Button variant="outline" size="sm" disabled>
-              Cargando...
-            </Button>
-          ) : user ? (
-            <>
-              <span className="text-sm text-muted-foreground hidden sm:inline">
-                Hola, {user.displayName?.split(' ')[0] || user.email}
-              </span>
-              <Button variant="outline" size="sm" onClick={onLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Cerrar Sesión
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={onLogin}>
-              <LogIn className="mr-2 h-4 w-4" />
-              Iniciar Sesión con Google
-            </Button>
-          )}
-        </div>
+        {/* Authentication related UI elements removed */}
       </div>
     </header>
   );
