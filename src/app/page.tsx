@@ -7,16 +7,17 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import { Header } from "@/components/layout/Header";
 import { CreateBoxDialog } from "@/components/CreateBoxDialog";
 import { BoxCard } from "@/components/BoxCard";
-import { ListView } from "@/components/ListView"; // Importar el nuevo componente
+import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PackageSearch, List, LayoutGrid, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import jsPDF from 'jspdf';
 
 export default function HomePage() {
   const [boxes, setBoxes] = useLocalStorage<Box[]>("trasteroBoxes", []);
   const [filter, setFilter] = useState("");
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card'); // Estado para el modo de vista
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const { toast } = useToast();
 
   const handleCreateBox = (boxData: Omit<Box, "id" | "items">) => {
@@ -98,27 +99,68 @@ export default function HomePage() {
   }, [boxes, filter]);
 
   const handleExportPDF = () => {
-    console.log("Exportar a PDF solicitado. Datos:", boxes);
-    let content = "Inventario del Trastero:\n\n";
-    boxes.forEach(box => {
-      content += `${box.name}:\n`;
+    const doc = new jsPDF();
+    let yPosition = 15; // Initial Y position for text, increased margin from top
+    const pageHeight = doc.internal.pageSize.height;
+    const bottomMargin = 15; // Margin from bottom
+
+    doc.setFontSize(18);
+    doc.text("Inventario del Trastero", doc.internal.pageSize.width / 2, yPosition, { align: "center" });
+    yPosition += 12;
+
+    boxes.forEach((box, boxIndex) => {
+      if (yPosition + 20 > pageHeight - bottomMargin) { // Check if new page is needed before box title
+        doc.addPage();
+        yPosition = 15;
+        doc.setFontSize(18); // Re-set title font size for new page if needed, though not a title here
+        doc.text("Inventario del Trastero (Continuación)", doc.internal.pageSize.width / 2, yPosition, { align: "center" });
+        yPosition += 12;
+      }
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${box.name}:`, 10, yPosition);
+      doc.setFont(undefined, 'normal');
+      yPosition += 8;
+
       if (box.items.length > 0) {
         box.items.forEach(item => {
           const availability = item.borrowedTo ? `Prestado a: ${item.borrowedTo}` : 'Disponible';
-          content += `- ${item.name} (${item.description || 'Sin descripción'}) (${availability})\n`;
+          let itemText = `- ${item.name}`;
+          if (item.description) {
+              itemText += ` (${item.description || 'Sin descripción'})`;
+          }
+          itemText += ` (${availability})`;
+          
+          const splitText = doc.splitTextToSize(itemText, doc.internal.pageSize.width - 20 - 15); // 10 for left margin, 15 for indent
+
+          if (yPosition + (splitText.length * 6) > pageHeight - bottomMargin) { // Check before printing item
+            doc.addPage();
+            yPosition = 15;
+          }
+          doc.setFontSize(10);
+          doc.text(splitText, 15, yPosition);
+          yPosition += (splitText.length * 6); 
         });
       } else {
-        content += "- (Esta caja está vacía)\n";
+        if (yPosition + 10 > pageHeight - bottomMargin) { // Check before printing empty message
+          doc.addPage();
+          yPosition = 15;
+        }
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'italic');
+        doc.text("- (Esta caja está vacía)", 15, yPosition);
+        doc.setFont(undefined, 'normal');
+        yPosition += 7;
       }
-      content += "\n";
+      yPosition += 6; // Extra space between boxes
     });
-    console.log(content); // Para ver el formato en la consola
+
+    doc.save("inventario_trastero.pdf");
     toast({
-      title: "Exportar a PDF",
-      description: "La funcionalidad de exportar a PDF aún no está implementada. El contenido se ha mostrado en la consola.",
+      title: "PDF Generado",
+      description: "El archivo 'inventario_trastero.pdf' ha sido descargado.",
       duration: 5000,
     });
-    // Aquí iría la lógica para generar el PDF, por ejemplo con jsPDF
   };
 
   return (
