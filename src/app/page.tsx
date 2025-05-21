@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -6,14 +7,16 @@ import useLocalStorage from "@/hooks/useLocalStorage";
 import { Header } from "@/components/layout/Header";
 import { CreateBoxDialog } from "@/components/CreateBoxDialog";
 import { BoxCard } from "@/components/BoxCard";
+import { ListView } from "@/components/ListView"; // Importar el nuevo componente
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HomePage() {
   const [boxes, setBoxes] = useLocalStorage<Box[]>("trasteroBoxes", []);
   const [filter, setFilter] = useState("");
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card'); // Estado para el modo de vista
   const { toast } = useToast();
 
   const handleCreateBox = (boxData: Omit<Box, "id" | "items">) => {
@@ -94,13 +97,47 @@ export default function HomePage() {
       .filter(box => box !== null) as Box[];
   }, [boxes, filter]);
 
+  const handleExportPDF = () => {
+    console.log("Exportar a PDF solicitado. Datos:", boxes);
+    let content = "Inventario del Trastero:\n\n";
+    boxes.forEach(box => {
+      content += `${box.name}:\n`;
+      if (box.items.length > 0) {
+        box.items.forEach(item => {
+          const availability = item.borrowedTo ? `Prestado a: ${item.borrowedTo}` : 'Disponible';
+          content += `- ${item.name} (${item.description || 'Sin descripción'}) (${availability})\n`;
+        });
+      } else {
+        content += "- (Esta caja está vacía)\n";
+      }
+      content += "\n";
+    });
+    console.log(content); // Para ver el formato en la consola
+    toast({
+      title: "Exportar a PDF",
+      description: "La funcionalidad de exportar a PDF aún no está implementada. El contenido se ha mostrado en la consola.",
+      duration: 5000,
+    });
+    // Aquí iría la lógica para generar el PDF, por ejemplo con jsPDF
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 container mx-auto py-8 px-4">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold text-foreground">Mis Cajas de Trastero</h1>
-          <CreateBoxDialog onCreateBox={handleCreateBox} />
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
+              {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
+              {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar a PDF
+            </Button>
+            <CreateBoxDialog onCreateBox={handleCreateBox} />
+          </div>
         </div>
 
         <div className="mb-8">
@@ -117,18 +154,22 @@ export default function HomePage() {
         </div>
 
         {filteredBoxes.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8">
-            {filteredBoxes.map((box) => (
-              <BoxCard
-                key={box.id}
-                box={box}
-                onAddItem={handleAddItem}
-                onUpdateItem={handleUpdateItem}
-                onDeleteItem={handleDeleteItem}
-                onDeleteBox={handleDeleteBox}
-              />
-            ))}
-          </div>
+          viewMode === 'card' ? (
+            <div className="grid grid-cols-1 gap-8">
+              {filteredBoxes.map((box) => (
+                <BoxCard
+                  key={box.id}
+                  box={box}
+                  onAddItem={handleAddItem}
+                  onUpdateItem={handleUpdateItem}
+                  onDeleteItem={handleDeleteItem}
+                  onDeleteBox={handleDeleteBox}
+                />
+              ))}
+            </div>
+          ) : (
+            <ListView boxes={filteredBoxes} />
+          )
         ) : (
           <div className="text-center py-12">
             <PackageSearch className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
