@@ -28,7 +28,7 @@ import type { Item } from "@/lib/types";
 import { useState, useEffect } from "react";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Item name is required"),
+  name: z.string().min(1, "El nombre del objeto es obligatorio"),
   description: z.string().optional(),
   borrowedTo: z.string().optional(),
 });
@@ -75,14 +75,14 @@ export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProp
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon">
           <Edit3 className="h-4 w-4" />
-          <span className="sr-only">Edit Item</span>
+          <span className="sr-only">Editar Objeto</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Item</DialogTitle>
+          <DialogTitle>Editar Objeto</DialogTitle>
           <DialogDescription>
-            Update the details for this item.
+            Actualiza los detalles de este objeto.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -92,7 +92,7 @@ export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProp
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Item Name</FormLabel>
+                  <FormLabel>Nombre del Objeto</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -105,7 +105,7 @@ export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProp
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descripción</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
@@ -118,17 +118,17 @@ export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProp
               name="borrowedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Borrowed To (Optional)</FormLabel>
+                  <FormLabel>Prestado A (Opcional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Leave blank if not borrowed" {...field} />
+                    <Input placeholder="Dejar en blanco si no está prestado" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit">Guardar Cambios</Button>
             </DialogFooter>
           </form>
         </Form>

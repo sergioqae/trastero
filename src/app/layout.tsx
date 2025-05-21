@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans'; // Corrected import
-import { GeistMono } from 'geist/font/mono'; // Corrected import
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster"; // Added Toaster import
+import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = GeistSans; // Direct usage if it's not an object with variable
-const geistMono = GeistMono; // Direct usage
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
 export const metadata: Metadata = {
-  title: 'Trastero Manager',
-  description: 'Manage your storage boxes and items with ease.',
+  title: 'Gestor de Trasteros',
+  description: 'Gestiona tus cajas y objetos del trastero con facilidad.',
 };
 
 export default function RootLayout({
@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body 
         className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}
       >

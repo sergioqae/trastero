@@ -27,7 +27,7 @@ import type { Box } from "@/lib/types";
 import { useState } from "react";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Box name is required"),
+  name: z.string().min(1, "El nombre de la caja es obligatorio"),
 });
 
 type CreateBoxFormValues = z.infer<typeof formSchema>;
@@ -56,14 +56,14 @@ export function CreateBoxDialog({ onCreateBox }: CreateBoxDialogProps) {
       <DialogTrigger asChild>
         <Button variant="outline">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Create New Box
+          Crear Nueva Caja
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Box</DialogTitle>
+          <DialogTitle>Crear Nueva Caja</DialogTitle>
           <DialogDescription>
-            Enter a name for your new storage box.
+            Introduce un nombre para tu nueva caja de trastero.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -73,17 +73,17 @@ export function CreateBoxDialog({ onCreateBox }: CreateBoxDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Box Name</FormLabel>
+                  <FormLabel>Nombre de la Caja</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Christmas Decorations" {...field} />
+                    <Input placeholder="Ej: Decoración de Navidad" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Create Box</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit">Crear Caja</Button>
             </DialogFooter>
           </form>
         </Form>

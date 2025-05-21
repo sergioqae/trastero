@@ -46,23 +46,23 @@ export function ItemCard({ item, boxId, onUpdateItem, onDeleteItem }: ItemCardPr
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
                   <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Delete Item</span>
+                  <span className="sr-only">Eliminar Objeto</span>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the item "{item.name}".
+                    Esta acción no se puede deshacer. Esto eliminará permanentemente el objeto "{item.name}".
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => onDeleteItem(boxId, item.id)}
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                   >
-                    Delete
+                    Eliminar
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -77,12 +77,12 @@ export function ItemCard({ item, boxId, onUpdateItem, onDeleteItem }: ItemCardPr
         {item.borrowedTo ? (
           <div className="text-sm text-accent-foreground bg-accent/20 px-2 py-1 rounded-md flex items-center">
             <UserCheck className="mr-2 h-4 w-4 text-accent" />
-            Borrowed by: {item.borrowedTo}
+            Prestado a: {item.borrowedTo}
           </div>
         ) : (
           <div className="text-sm text-muted-foreground flex items-center">
             <UserX className="mr-2 h-4 w-4" />
-            Available
+            Disponible
           </div>
         )}
       </CardFooter>

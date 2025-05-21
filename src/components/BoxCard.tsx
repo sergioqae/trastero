@@ -47,23 +47,23 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="icon">
                   <Trash2 className="h-4 w-4" />
-                   <span className="sr-only">Delete Box</span>
+                   <span className="sr-only">Eliminar Caja</span>
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the box "{box.name}" and all its items.
+                    Esta acción no se puede deshacer. Esto eliminará permanentemente la caja "{box.name}" y todos sus objetos.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => onDeleteBox(box.id)}
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                   >
-                    Delete Box
+                    Eliminar Caja
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -71,7 +71,7 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
           </div>
         </div>
         <CardDescription className="pt-1">
-          {box.items.length} item(s) in this box.
+          {box.items.length} objeto{box.items.length === 1 ? '' : 's'} en esta caja.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -88,7 +88,7 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-center py-4">This box is empty. Add some items!</p>
+          <p className="text-muted-foreground text-center py-4">Esta caja está vacía. ¡Añade algunos objetos!</p>
         )}
       </CardContent>
     </Card>

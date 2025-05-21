@@ -28,7 +28,7 @@ import type { Item } from "@/lib/types";
 import { useState } from "react";
 
 const formSchema = z.object({
-  name: z.string().min(1, "Item name is required"),
+  name: z.string().min(1, "El nombre del objeto es obligatorio"),
   description: z.string().optional(),
   borrowedTo: z.string().optional(),
 });
@@ -66,14 +66,14 @@ export function AddItemDialog({ boxId, onAddItem }: AddItemDialogProps) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Item
+          Añadir Objeto
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Item</DialogTitle>
+          <DialogTitle>Añadir Nuevo Objeto</DialogTitle>
           <DialogDescription>
-            Enter the details for the new item.
+            Introduce los detalles del nuevo objeto.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -83,9 +83,9 @@ export function AddItemDialog({ boxId, onAddItem }: AddItemDialogProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Item Name</FormLabel>
+                  <FormLabel>Nombre del Objeto</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Red Scarf" {...field} />
+                    <Input placeholder="Ej: Bufanda Roja" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -96,9 +96,9 @@ export function AddItemDialog({ boxId, onAddItem }: AddItemDialogProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descripción</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., Wool, very warm" {...field} />
+                    <Textarea placeholder="Ej: De lana, muy cálida" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -109,17 +109,17 @@ export function AddItemDialog({ boxId, onAddItem }: AddItemDialogProps) {
               name="borrowedTo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Borrowed To (Optional)</FormLabel>
+                  <FormLabel>Prestado A (Opcional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Jane Doe" {...field} />
+                    <Input placeholder="Ej: Juan Pérez" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit">Add Item</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button type="submit">Añadir Objeto</Button>
             </DialogFooter>
           </form>
         </Form>
