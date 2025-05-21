@@ -35,88 +35,97 @@ interface BoxCardProps {
   onDeleteBox: (boxId: string) => void;
   onUpdateBoxName: (boxId: string, newName: string) => void;
   onUnassignBox?: (boxId: string) => void;
-  isFilteredView?: boolean; 
-  totalItemsInBoxOriginal: number; 
+  isFilteredView?: boolean;
+  totalItemsInBoxOriginal: number;
 }
 
-export function BoxCard({ 
-    box, 
-    onAddItem, 
-    onUpdateItem, 
-    onDeleteItem, 
-    onDeleteBox, 
-    onUpdateBoxName,
-    onUnassignBox,
-    isFilteredView, 
-    totalItemsInBoxOriginal 
+export function BoxCard({
+  box,
+  onAddItem,
+  onUpdateItem,
+  onDeleteItem,
+  onDeleteBox,
+  onUpdateBoxName,
+  onUnassignBox,
+  isFilteredView,
+  totalItemsInBoxOriginal,
 }: BoxCardProps) {
   const itemsToShow = box.items;
-  
-  let descriptionText = `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`;
+
+  let descriptionText = `${itemsToShow.length} objeto${
+    itemsToShow.length === 1 ? "" : "s"
+  } en esta caja.`;
   if (isFilteredView) {
     if (itemsToShow.length !== totalItemsInBoxOriginal) {
       descriptionText = `${itemsToShow.length} de ${totalItemsInBoxOriginal} objeto(s) coincidente(s).`;
     } else if (totalItemsInBoxOriginal > 0) {
-       descriptionText = `Todos los ${totalItemsInBoxOriginal} objeto(s) coinciden.`;
+      descriptionText = `Todos los ${totalItemsInBoxOriginal} objeto(s) coinciden.`;
     } else {
-       descriptionText = "Esta caja está vacía y coincide con el filtro.";
+      descriptionText = "Esta caja está vacía y coincide con el filtro.";
     }
   }
 
   const locationText = box.location
-    ? `Ubicación: ${box.location.estanteriaName}${box.location.baldaName ? ` > ${box.location.baldaName}` : ' (Directo en Estantería)'}`
+    ? `Ubicación: ${box.location.estanteriaName}${
+        box.location.baldaName
+          ? ` > ${box.location.baldaName}`
+          : " (Directo en Estantería)"
+      }`
     : "Sin ubicar";
 
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70 flex flex-col">
-      <CardHeader className="border-b">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1 mr-2">
-            <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl flex items-center">
-                    <Archive className="mr-3 h-7 w-7 text-primary flex-shrink-0" />
-                    <span className="truncate">{box.name}</span>
-                </CardTitle>
-                <EditNameDialog
-                    currentName={box.name}
-                    itemTypeForTitle="Caja"
-                    onSave={(newName) => onUpdateBoxName(box.id, newName)}
-                />
-            </div>
-            <CardDescription className="pt-1 text-xs truncate">
-              {locationText}
-            </CardDescription>
+      <CardHeader className="border-b p-4"> {/* Reduced padding for compactness */}
+        {/* First row: Title, Edit Name, Delete Box */}
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2"> {/* Title and Edit group */}
+            <Archive className="h-6 w-6 text-primary flex-shrink-0" />
+            <CardTitle className="text-xl font-semibold leading-tight min-w-0">
+              <span className="truncate block" title={box.name}>{box.name}</span>
+            </CardTitle>
+            <EditNameDialog
+              currentName={box.name}
+              itemTypeForTitle="Caja"
+              onSave={(newName) => onUpdateBoxName(box.id, newName)}
+            />
           </div>
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <AddItemDialog boxId={box.id} onAddItem={onAddItem} />
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                   <span className="sr-only">Eliminar Caja</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Esto eliminará permanentemente la caja "{box.name}" y todos sus objetos.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => onDeleteBox(box.id)}
-                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                  >
-                    Eliminar Caja
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon" className="flex-shrink-0">
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Eliminar Caja</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Esto eliminará permanentemente la caja "{box.name}" y todos sus objetos.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDeleteBox(box.id)}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Eliminar Caja
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-        <CardDescription className="pt-2">
+
+        {/* Second row: Location and Add Item button */}
+        <div className="flex justify-between items-center">
+          <CardDescription className="text-xs text-muted-foreground truncate flex-1 mr-2" title={locationText}>
+            {locationText}
+          </CardDescription>
+          <AddItemDialog boxId={box.id} onAddItem={onAddItem} />
+        </div>
+        
+        {/* Item count description */}
+        <CardDescription className="pt-2 text-sm">
           {descriptionText}
         </CardDescription>
       </CardHeader>
@@ -135,17 +144,24 @@ export function BoxCard({
           </div>
         ) : (
           <p className="text-muted-foreground text-center py-4">
-            {isFilteredView && !itemsToShow.length ? "No hay objetos coincidentes con el filtro en esta caja." : "Esta caja está vacía. ¡Añade algunos objetos!"}
+            {isFilteredView && !itemsToShow.length
+              ? "No hay objetos coincidentes con el filtro en esta caja."
+              : "Esta caja está vacía. ¡Añade algunos objetos!"}
           </p>
         )}
       </CardContent>
-      { (onUnassignBox && box.location) && (
+      {onUnassignBox && box.location && (
         <CardFooter className="border-t pt-4">
-            <Button variant="outline" size="sm" onClick={() => onUnassignBox(box.id)}>
-                <CornerLeftUp className="mr-2 h-4 w-4"/> Desasignar de Ubicación
-            </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onUnassignBox(box.id)}
+          >
+            <CornerLeftUp className="mr-2 h-4 w-4" /> Desasignar de Ubicación
+          </Button>
         </CardFooter>
       )}
     </Card>
   );
-}
+
+    
