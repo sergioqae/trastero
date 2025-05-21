@@ -8,9 +8,9 @@ export interface Item {
 
 export interface BoxLocation {
   estanteriaId: string;
-  baldaId: string;
   estanteriaName: string; // For display purposes
-  baldaName: string;     // For display purposes
+  baldaId?: string | null; // Optional: if null, box is directly on estanteria
+  baldaName?: string | null; // Optional
 }
 
 export interface Box {
@@ -30,4 +30,5 @@ export interface Estanteria {
   id: string;
   name: string;
   baldas: Balda[];
+  looseItems: Item[]; // For items directly on the estanteria
 }

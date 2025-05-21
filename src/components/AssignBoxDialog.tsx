@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IterationCcw, PlusCircle } from "lucide-react";
+import { IterationCcw } from "lucide-react";
 import type { Box } from "@/lib/types";
 
 const formSchema = z.object({
@@ -41,37 +41,42 @@ type AssignBoxFormValues = z.infer<typeof formSchema>;
 
 interface AssignBoxDialogProps {
   estanteriaId: string;
-  baldaId: string;
+  baldaId?: string | null; // Made optional for assigning directly to estanteria
   boxes: Box[]; // List of assignable boxes (e.g., unassigned ones)
-  onAssignBox: (boxId: string, estanteriaId: string, baldaId: string) => void;
+  onAssignBox: (boxId: string, estanteriaId: string, baldaId?: string | null) => void;
+  triggerText?: string;
 }
 
-export function AssignBoxDialog({ estanteriaId, baldaId, boxes, onAssignBox }: AssignBoxDialogProps) {
+export function AssignBoxDialog({ estanteriaId, baldaId, boxes, onAssignBox, triggerText = "Asignar Caja Existente" }: AssignBoxDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<AssignBoxFormValues>({
     resolver: zodResolver(formSchema),
   });
 
   const onSubmit = (data: AssignBoxFormValues) => {
-    onAssignBox(data.boxId, estanteriaId, baldaId);
+    onAssignBox(data.boxId, estanteriaId, baldaId); // Pass baldaId (could be null)
     form.reset();
     setOpen(false);
   };
+
+  const dialogTitle = baldaId ? "Asignar Caja a esta Balda" : "Asignar Caja a esta Estantería";
+  const dialogDescription = baldaId 
+    ? "Selecciona una caja de la lista de cajas sin ubicar para asignarla a esta balda."
+    : "Selecciona una caja de la lista de cajas sin ubicar para asignarla directamente a esta estantería.";
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <IterationCcw className="mr-2 h-4 w-4" />
-          Asignar Caja Existente
+          {triggerText}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Asignar Caja a esta Balda</DialogTitle>
-          <DialogDescription>
-            Selecciona una caja de la lista de cajas sin ubicar.
-          </DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
         {boxes.length > 0 ? (
           <Form {...form}>

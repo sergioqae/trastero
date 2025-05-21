@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Box, Item, Estanteria, Balda } from "@/lib/types";
+import type { Box, Item, Estanteria } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -11,10 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Archive, Trash2, IterationCcw, CornerLeftUp } from "lucide-react"; // Changed BoxIcon to Archive
+import { Archive, Trash2, CornerLeftUp } from "lucide-react";
 import { ItemCard } from "./ItemCard";
 import { AddItemDialog } from "./AddItemDialog";
-import { AssignBoxDialog } from "./AssignBoxDialog"; // For re-assigning
+// AssignBoxDialog is not directly used here for re-assignment to avoid complexity, handled at higher level
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,9 +33,9 @@ interface BoxCardProps {
   onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
-  onUnassignBox?: (boxId: string) => void; // Make optional if not always needed
-  onAssignBoxToBalda?: (boxId: string, estanteriaId: string, baldaId: string) => void; // For re-assigning
-  estanterias?: Estanteria[]; // For AssignBoxDialog if re-assigning
+  onUnassignBox?: (boxId: string) => void;
+  // onAssignBoxToLocation is handled by AssignBoxDialog triggered from higher components
+  // estanterias prop is also for AssignBoxDialog, not directly used here
   isFilteredView?: boolean; 
   totalItemsInBoxOriginal: number; 
 }
@@ -47,8 +47,6 @@ export function BoxCard({
     onDeleteItem, 
     onDeleteBox, 
     onUnassignBox,
-    onAssignBoxToBalda,
-    estanterias,
     isFilteredView, 
     totalItemsInBoxOriginal 
 }: BoxCardProps) {
@@ -56,7 +54,6 @@ export function BoxCard({
   
   let descriptionText = `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`;
   if (isFilteredView) {
-    // This part might need adjustment based on how filtering is applied to boxes within baldas/estanterias
     if (itemsToShow.length !== totalItemsInBoxOriginal) {
       descriptionText = `${itemsToShow.length} de ${totalItemsInBoxOriginal} objeto(s) coincidente(s).`;
     } else if (totalItemsInBoxOriginal > 0) {
@@ -66,8 +63,8 @@ export function BoxCard({
     }
   }
 
-  const locationText = box.location 
-    ? `Ubicación: ${box.location.estanteriaName} > ${box.location.baldaName}`
+  const locationText = box.location
+    ? `Ubicación: ${box.location.estanteriaName}${box.location.baldaName ? ` > ${box.location.baldaName}` : ' (Directo en Estantería)'}`
     : "Sin ubicar";
 
   return (
@@ -118,7 +115,7 @@ export function BoxCard({
       </CardHeader>
       <CardContent className="pt-6 flex-grow">
         {itemsToShow.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Adjusted for potentially less space */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {itemsToShow.map((item) => (
               <ItemCard
                 key={item.id}
@@ -138,17 +135,10 @@ export function BoxCard({
       { (onUnassignBox && box.location) && (
         <CardFooter className="border-t pt-4">
             <Button variant="outline" size="sm" onClick={() => onUnassignBox(box.id)}>
-                <CornerLeftUp className="mr-2 h-4 w-4"/> Desasignar de Balda
+                <CornerLeftUp className="mr-2 h-4 w-4"/> Desasignar de Ubicación
             </Button>
         </CardFooter>
       )}
-      {/* Placeholder for re-assigning if needed directly from box card - complex UI
-      { onAssignBoxToBalda && estanterias && !box.location && (
-         <CardFooter className="border-t pt-4">
-            <AssignBoxDialog estanteriaId="" baldaId="" boxes={[box]} onAssignBox={(boxId, estId, balId) => onAssignBoxToBalda(boxId, estId, balId)} />
-         </CardFooter>
-      )}
-      */}
     </Card>
   );
 }
