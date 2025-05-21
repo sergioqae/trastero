@@ -75,10 +75,10 @@ export function BoxCard({
 
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70 flex flex-col">
-      <CardHeader className="border-b p-4"> {/* Reduced padding for compactness */}
+      <CardHeader className="border-b p-4 space-y-2">
         {/* First row: Title, Edit Name, Delete Box */}
-        <div className="flex justify-between items-center mb-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2"> {/* Title and Edit group */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
             <Archive className="h-6 w-6 text-primary flex-shrink-0" />
             <CardTitle className="text-xl font-semibold leading-tight min-w-0">
               <span className="truncate block" title={box.name}>{box.name}</span>
@@ -125,7 +125,7 @@ export function BoxCard({
         </div>
         
         {/* Item count description */}
-        <CardDescription className="pt-2 text-sm">
+        <CardDescription className="pt-1 text-sm">
           {descriptionText}
         </CardDescription>
       </CardHeader>
@@ -163,5 +163,4 @@ export function BoxCard({
       )}
     </Card>
   );
-
-    
+}

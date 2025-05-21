@@ -26,12 +26,12 @@ import {
 
 interface ItemCardProps {
   item: Item;
-  boxId: string;
-  onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
-  onDeleteItem: (boxId: string, itemId: string) => void;
+  boxId: string; // This contextId can be boxId, estanteriaId or baldaId
+  onUpdateItem: (contextId: string, itemId: string, itemData: Omit<Item, "id">) => void;
+  onDeleteItem: (contextId: string, itemId: string) => void;
 }
 
-export function ItemCard({ item, boxId, onUpdateItem, onDeleteItem }: ItemCardProps) {
+export function ItemCard({ item, boxId: contextId, onUpdateItem, onDeleteItem }: ItemCardProps) {
   return (
     <Card className="w-full shadow-md hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
@@ -41,7 +41,7 @@ export function ItemCard({ item, boxId, onUpdateItem, onDeleteItem }: ItemCardPr
             {item.name}
           </CardTitle>
           <div className="flex items-center space-x-1">
-            <EditItemDialog item={item} boxId={boxId} onUpdateItem={onUpdateItem} />
+            <EditItemDialog item={item} boxId={contextId} onUpdateItem={onUpdateItem} />
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -59,7 +59,7 @@ export function ItemCard({ item, boxId, onUpdateItem, onDeleteItem }: ItemCardPr
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={() => onDeleteItem(boxId, item.id)}
+                    onClick={() => onDeleteItem(contextId, item.id)}
                     className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                   >
                     Eliminar

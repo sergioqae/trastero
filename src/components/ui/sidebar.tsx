@@ -135,7 +135,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex w-full", // Removed min-h-svh as it's handled by parent in page.tsx
+              "group/sidebar-wrapper flex w-full", 
               className
             )}
             ref={ref}
@@ -215,25 +215,28 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
       >
-        <div
+        {/* Spacer div for fixed sidebar */}
+         <div
           className={cn(
-            "duration-200 relative w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
-            "h-[calc(100svh-var(--header-height))]", // Adjusted height
+            "duration-200 relative bg-transparent transition-[width] ease-linear",
+            "h-[calc(100vh-var(--header-height))]", // Adjusted height
             "group-data-[collapsible=offcanvas]:w-0",
-            "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
+            state === "expanded" ? "w-[--sidebar-width]" : "" // Ensure spacer has width when expanded
           )}
            style={{ '--header-height': HEADER_HEIGHT } as React.CSSProperties}
         />
+        {/* Fixed sidebar content */}
         <div
           className={cn(
-            "duration-200 fixed z-10 hidden w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
-            "top-[var(--header-height)] h-[calc(100svh-var(--header-height))]", // Adjusted top and height
+            "duration-200 fixed z-10 hidden transition-[left,right,width] ease-linear md:flex",
+            "top-[var(--header-height)] h-[calc(100vh-var(--header-height))]", // Adjusted top and height
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            state === "expanded" ? "w-[--sidebar-width]" : "", // Width when expanded
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -297,7 +300,7 @@ const SidebarRail = React.forwardRef<
       title="Toggle Sidebar"
       className={cn(
         "absolute z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
-        "inset-y-0", // Keeps it vertically aligned with its parent
+        "inset-y-0", 
         "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar",
@@ -320,8 +323,8 @@ const SidebarInset = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex flex-1 flex-col bg-background",
-        "min-h-[calc(100svh-var(--header-height))]", // Adjusted min-height
-        "peer-data-[variant=inset]:min-h-[calc(100svh-var(--header-height)-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
+        "min-h-[calc(100vh-var(--header-height))]", // Adjusted min-height to account for header
+        "peer-data-[variant=inset]:min-h-[calc(100vh-var(--header-height)-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}
       style={{ '--header-height': HEADER_HEIGHT } as React.CSSProperties}
@@ -757,5 +760,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
-
     

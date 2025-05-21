@@ -1,2 +1,2 @@
-// This file is intentionally left blank or can be deleted.
-// Firebase integration has been reverted.
+// This file is intentionally left blank as Firebase integration was reverted.
+// The app is currently using localStorage.

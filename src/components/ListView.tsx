@@ -78,5 +78,4 @@ export function ListView({ boxes, isFilteredView, allItemsCount, selectedBoxName
     </div>
   );
 }
-
     

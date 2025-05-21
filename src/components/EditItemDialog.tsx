@@ -37,11 +37,11 @@ type EditItemFormValues = z.infer<typeof formSchema>;
 
 interface EditItemDialogProps {
   item: Item;
-  boxId: string;
-  onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
+  boxId: string; // Can be boxId, estanteriaId or baldaId depending on context
+  onUpdateItem: (contextId: string, itemId: string, itemData: Omit<Item, "id">) => void;
 }
 
-export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProps) {
+export function EditItemDialog({ item, boxId: contextId, onUpdateItem }: EditItemDialogProps) {
   const [open, setOpen] = useState(false);
   const form = useForm<EditItemFormValues>({
     resolver: zodResolver(formSchema),
@@ -62,7 +62,7 @@ export function EditItemDialog({ item, boxId, onUpdateItem }: EditItemDialogProp
 
 
   const onSubmit = (data: EditItemFormValues) => {
-    onUpdateItem(boxId, item.id, {
+    onUpdateItem(contextId, item.id, {
       name: data.name,
       description: data.description || "",
       borrowedTo: data.borrowedTo || null,

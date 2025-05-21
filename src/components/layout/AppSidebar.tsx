@@ -73,7 +73,7 @@ export function AppSidebar({ boxes, estanterias, currentSelection, onSelect }: A
                   </SidebarMenuItem>
                   <Accordion.Content className="overflow-hidden transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                     <SidebarMenuSub>
-                      {est.baldas.length > 0 ? est.baldas.map((balda) => (
+                      {(est.baldas || []).length > 0 ? (est.baldas || []).map((balda) => (
                         <SidebarMenuSubItem key={balda.id}>
                           <SidebarMenuSubButton
                             onClick={() => onSelect({ type: 'balda', id: balda.id, estanteriaId: est.id, name: balda.name })}

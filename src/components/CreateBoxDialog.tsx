@@ -33,7 +33,7 @@ const formSchema = z.object({
 type CreateBoxFormValues = z.infer<typeof formSchema>;
 
 interface CreateBoxDialogProps {
-  onCreateBox: (boxData: Omit<Box, "id" | "items">) => void;
+  onCreateBox: (boxData: Omit<Box, "id" | "items" | "location">) => void;
 }
 
 export function CreateBoxDialog({ onCreateBox }: CreateBoxDialogProps) {

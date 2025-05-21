@@ -996,6 +996,8 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredEstanterias.map((est) => {
                 const directBoxes = sortedBoxes.filter(b => b.location?.estanteriaId === est.id && !b.location?.baldaId);
+                const estLooseItems = (est.looseItems || []);
+                const estBaldas = (est.baldas || []);
                 return (
                   <Card key={est.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
                     <CardHeader className="pb-3">
@@ -1034,16 +1036,16 @@ export default function HomePage() {
                           </AlertDialog>
                       </div>
                       <CardDescription className="pt-1 text-xs">
-                        {(est.looseItems || []).length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {(est.baldas || []).length} balda(s).
+                        {estLooseItems.length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {estBaldas.length} balda(s).
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-3 pt-3 text-sm">
                       {/* Objetos Sueltos Directos en Estantería */}
-                      {(est.looseItems || []).length > 0 && (
+                      {estLooseItems.length > 0 && (
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Package className="mr-2 h-4 w-4" />Objetos Sueltos Directos:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {(est.looseItems || []).map(item => (
+                            {estLooseItems.map(item => (
                               <li key={item.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
                                   {item.name}
@@ -1072,20 +1074,21 @@ export default function HomePage() {
                       )}
                       
                       {/* Baldas */}
-                      {(est.baldas || []).length > 0 && (
+                      {estBaldas.length > 0 && (
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Layers className="mr-2 h-4 w-4" />Baldas:</h4>
                           <div className="space-y-2 pl-2">
-                            {(est.baldas || []).map(balda => {
+                            {estBaldas.map(balda => {
                               const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id);
+                              const baldaLooseItems = (balda.looseItems || []);
                               return (
                                 <div key={balda.id} className="p-2 border rounded-md bg-card/50">
                                   <Button variant="link" className="p-0 h-auto font-medium text-sm" onClick={() => setSidebarSelection({ type: 'balda', id: balda.id, estanteriaId: est.id, name: balda.name })}>
                                     <Layers className="mr-1 h-3.5 w-3.5"/>{balda.name}
                                   </Button>
-                                  {(balda.looseItems || []).length > 0 && (
+                                  {baldaLooseItems.length > 0 && (
                                     <ul className="list-disc list-inside pl-6 text-xs">
-                                      {(balda.looseItems || []).map(item => (
+                                      {baldaLooseItems.map(item => (
                                         <li key={item.id} className="truncate">
                                           <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
                                           {item.name}
@@ -1106,14 +1109,14 @@ export default function HomePage() {
                                       ))}
                                     </ul>
                                   )}
-                                  {((balda.looseItems || []).length === 0 && boxesOnBalda.length === 0) && <p className="pl-6 text-xs text-muted-foreground italic">(Balda vacía)</p>}
+                                  {(baldaLooseItems.length === 0 && boxesOnBalda.length === 0) && <p className="pl-6 text-xs text-muted-foreground italic">(Balda vacía)</p>}
                                 </div>
                               );
                             })}
                           </div>
                         </div>
                       )}
-                       {((est.looseItems || []).length === 0 && directBoxes.length === 0 && (est.baldas || []).length === 0) && (
+                       {(estLooseItems.length === 0 && directBoxes.length === 0 && estBaldas.length === 0) && (
                         <p className="text-sm text-muted-foreground italic text-center py-4">Esta estantería está vacía.</p>
                        )}
                     </CardContent>
@@ -1249,5 +1252,3 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
-
-    

@@ -2,8 +2,6 @@
 "use client";
 import { Package2 } from 'lucide-react';
 import Link from 'next/link';
-// Firebase User import and Button were removed
-// Props related to user, login, logout, loadingAuth were removed
 
 export function Header() {
   return (
@@ -15,7 +13,6 @@ export function Header() {
             Gestor de Trasteros
           </span>
         </Link>
-        {/* Authentication related UI elements removed */}
       </div>
     </header>
   );

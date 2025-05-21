@@ -34,7 +34,7 @@ const formSchema = z.object({
 type CreateEstanteriaFormValues = z.infer<typeof formSchema>;
 
 interface CreateEstanteriaDialogProps {
-  onCreateEstanteria: (estanteriaData: Omit<Estanteria, "id" | "baldas">) => void;
+  onCreateEstanteria: (estanteriaData: Omit<Estanteria, "id" | "baldas" | "looseItems">) => void;
 }
 
 export function CreateEstanteriaDialog({ onCreateEstanteria }: CreateEstanteriaDialogProps) {
