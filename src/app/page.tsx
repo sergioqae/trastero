@@ -28,7 +28,12 @@ export default function HomePage() {
   const [filter, setFilter] = useState("");
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const handleCreateBox = (boxData: Omit<Box, "id" | "items">) => {
     const newBox: Box = {
@@ -109,7 +114,7 @@ export default function HomePage() {
 
     return candidateBoxes
       .map(box => {
-        const itemsInBox = selectedBoxId && box.id === selectedBoxId ? box.items : box.items; // Use all items if filtering globally, or items from selected box
+        const itemsInBox = selectedBoxId && box.id === selectedBoxId ? box.items : box.items; 
         
         const matchingItems = itemsInBox.filter(
           item =>
@@ -120,15 +125,13 @@ export default function HomePage() {
 
         const boxNameMatches = box.name.toLowerCase().includes(lowercasedFilter);
         
-        if (selectedBoxId && box.id === selectedBoxId) { // If a box is selected, only filter its items
-            return matchingItems.length > 0 || boxNameMatches ? { ...box, items: matchingItems } : { ...box, items: [] } // show box, but items can be empty
+        if (selectedBoxId && box.id === selectedBoxId) { 
+            return matchingItems.length > 0 || boxNameMatches ? { ...box, items: matchingItems } : { ...box, items: [] } 
         }
-
 
         if (boxNameMatches || matchingItems.length > 0) {
           return {
             ...box,
-            // If filtering globally and box name matches, show all its items or just matching if not box name match
             items: boxNameMatches && !selectedBoxId ? box.items : matchingItems,
           };
         }
@@ -313,11 +316,9 @@ export default function HomePage() {
           </SidebarInset>
         </div>
         <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-          Gestor de Trasteros &copy; {new Date().getFullYear()}
+          Gestor de Trasteros &copy; {currentYear || '...'}
         </footer>
       </div>
     </SidebarProvider>
   );
 }
-
-    
