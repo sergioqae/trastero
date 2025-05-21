@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Box, Item, Estanteria } from "@/lib/types";
+import type { Box, Item } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Archive, Trash2, CornerLeftUp } from "lucide-react";
 import { ItemCard } from "./ItemCard";
 import { AddItemDialog } from "./AddItemDialog";
-// AssignBoxDialog is not directly used here for re-assignment to avoid complexity, handled at higher level
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,8 +33,6 @@ interface BoxCardProps {
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
   onUnassignBox?: (boxId: string) => void;
-  // onAssignBoxToLocation is handled by AssignBoxDialog triggered from higher components
-  // estanterias prop is also for AssignBoxDialog, not directly used here
   isFilteredView?: boolean; 
   totalItemsInBoxOriginal: number; 
 }
@@ -70,17 +67,18 @@ export function BoxCard({
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70 flex flex-col">
       <CardHeader className="border-b">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-2"> {/* Main flex row for header content */}
+          <div className="min-w-0 flex-1 mr-2"> {/* Title block: allow to shrink and take available space */}
             <CardTitle className="text-2xl flex items-center">
-              <Archive className="mr-3 h-7 w-7 text-primary" />
-              {box.name}
+              <Archive className="mr-3 h-7 w-7 text-primary flex-shrink-0" /> {/* Icon container */}
+              <span className="truncate">{box.name}</span> {/* Truncate box name */}
             </CardTitle>
-            <CardDescription className="pt-1 text-xs">
+            <CardDescription className="pt-1 text-xs truncate"> {/* Truncate location text */}
               {locationText}
             </CardDescription>
           </div>
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Actions block */}
+          <div className="flex items-center space-x-2 flex-shrink-0"> {/* Ensure this block doesn't shrink */}
             <AddItemDialog boxId={box.id} onAddItem={onAddItem} />
             <AlertDialog>
               <AlertDialogTrigger asChild>
