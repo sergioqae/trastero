@@ -10,7 +10,7 @@ import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -26,7 +26,7 @@ import { CreateBaldaDialog } from "@/components/CreateBaldaDialog";
 import { AddLooseItemDialog } from "@/components/AddLooseItemDialog";
 import { AddLooseItemToEstanteriaDialog } from "@/components/AddLooseItemToEstanteriaDialog";
 import { AssignBoxDialog } from "@/components/AssignBoxDialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ItemCard } from "@/components/ItemCard";
 import { EditItemDialog } from "@/components/EditItemDialog";
 import { EditNameDialog } from "@/components/EditNameDialog";
@@ -74,11 +74,11 @@ export default function HomePage() {
     );
     setBoxes(prevBoxes => 
       prevBoxes.map(b => 
-        b.location?.estanteriaId === estanteriaId ? { ...b, location: { ...b.location, estanteriaName: newName } } : b
+        b.location?.estanteriaId === estanteriaId ? { ...b, location: { ...(b.location!), estanteriaName: newName } } : b
       )
     );
     if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
-      setSidebarSelection(prev => ({ ...prev, name: newName }));
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     } else if (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaId) {
        // If a balda of this estanteria is selected, its title will update via selectedEstanteria dependency
     }
@@ -138,8 +138,8 @@ export default function HomePage() {
   const handleDeleteLooseItemFromEstanteria = (estanteriaId: string, itemId: string) => {
     let itemName = "El objeto seleccionado";
     const est = estanterias.find(e => e.id === estanteriaId);
-    if (est) {
-        const item = (est.looseItems || []).find(i => i.id === itemId);
+    if (est && est.looseItems) {
+        const item = est.looseItems.find(i => i.id === itemId);
         if (item) itemName = item.name;
     }
     setEstanterias(prevEstanterias =>
@@ -182,12 +182,12 @@ export default function HomePage() {
     setBoxes(prevBoxes => 
       prevBoxes.map(b => 
         (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId) 
-        ? { ...b, location: { ...b.location, baldaName: newName } } 
+        ? { ...b, location: { ...(b.location!), baldaName: newName } } 
         : b
       )
     );
     if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
-      setSidebarSelection(prev => ({ ...prev, name: newName }));
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     }
     toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
@@ -213,7 +213,7 @@ export default function HomePage() {
       )
     );
     if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaIdToDelete) {
-      setSidebarSelection({ type: 'estanteria', id: estanteriaId, name: estanteria.name, estanteriaId: estanteria.id });
+      setSidebarSelection({ type: 'estanteria', id: estanteria.id, name: estanteria.name, estanteriaId: estanteria.id });
     }
     toast({ title: "Balda Eliminada", description: `La balda "${balda.name}" ha sido eliminada.`, variant: "destructive" });
   };
@@ -265,8 +265,8 @@ export default function HomePage() {
     let itemName = "El objeto seleccionado";
     const est = estanterias.find(e => e.id === estanteriaId);
     const balda = (est?.baldas || []).find(b => b.id === baldaId);
-    if (balda) {
-        const item = (balda.looseItems || []).find(i => i.id === itemId);
+    if (balda && balda.looseItems) {
+        const item = balda.looseItems.find(i => i.id === itemId);
         if (item) itemName = item.name;
     }
     setEstanterias(prevEstanterias =>
@@ -300,7 +300,7 @@ export default function HomePage() {
       ).sort((a,b) => a.name.localeCompare(b.name))
     );
     if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
-      setSidebarSelection(prev => ({ ...prev, name: newName }));
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     }
     toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
@@ -983,11 +983,190 @@ export default function HomePage() {
       );
     }
 
-    // Default View (all-estanterias) - Simplified for diagnosing parsing error
+    // Default View (all-estanterias)
     return (
-      <div>
-        <p>Test: Vista de Todas las Estanterías</p>
-        <p>Si ves esto, el error de parsing está en el JSX complejo que fue eliminado temporalmente de esta sección.</p>
+      <div className="space-y-8">
+        <section>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold flex items-center">
+              <Library className="mr-3 h-7 w-7 text-primary"/>Mis Estanterías ({filteredEstanterias.length})
+            </h2>
+          </div>
+          {filteredEstanterias.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredEstanterias.map((est) => {
+                const directBoxes = sortedBoxes.filter(b => b.location?.estanteriaId === est.id && !b.location?.baldaId);
+                return (
+                  <Card key={est.id} className="flex flex-col shadow-md hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <Button variant="link" className="p-0 h-auto text-xl font-semibold" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
+                                  <Server className="mr-2 h-6 w-6 text-primary flex-shrink-0" />
+                                  <span className="truncate" title={est.name}>{est.name}</span>
+                              </Button>
+                              <EditNameDialog
+                                  currentName={est.name}
+                                  itemTypeForTitle="Estantería"
+                                  onSave={(newName) => handleUpdateEstanteriaName(est.id, newName)}
+                              />
+                          </div>
+                          <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive flex-shrink-0">
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                      <AlertDialogTitle>¿Eliminar Estantería?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          Se eliminará la estantería "{est.name}" y todo su contenido (baldas, objetos sueltos y cajas asignadas pasarán a estar sin ubicar).
+                                      </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteEstanteria(est.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                          Eliminar Estantería
+                                      </AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                          </AlertDialog>
+                      </div>
+                      <CardDescription className="pt-1 text-xs">
+                        {(est.looseItems || []).length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {(est.baldas || []).length} balda(s).
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-3 pt-3 text-sm">
+                      {/* Objetos Sueltos Directos en Estantería */}
+                      {(est.looseItems || []).length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-muted-foreground flex items-center"><Package className="mr-2 h-4 w-4" />Objetos Sueltos Directos:</h4>
+                          <ul className="list-disc list-inside pl-4 text-xs">
+                            {(est.looseItems || []).map(item => (
+                              <li key={item.id} className="truncate">
+                                <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
+                                  {item.name}
+                                </Button>
+                                {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Cajas Directas en Estantería */}
+                      {directBoxes.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-muted-foreground flex items-center"><Archive className="mr-2 h-4 w-4" />Cajas Directas:</h4>
+                          <ul className="list-disc list-inside pl-4 text-xs">
+                            {directBoxes.map(box => (
+                              <li key={box.id} className="truncate">
+                                <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
+                                  {box.name}
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {/* Baldas */}
+                      {(est.baldas || []).length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-muted-foreground flex items-center"><Layers className="mr-2 h-4 w-4" />Baldas:</h4>
+                          <div className="space-y-2 pl-2">
+                            {(est.baldas || []).map(balda => {
+                              const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id);
+                              return (
+                                <div key={balda.id} className="p-2 border rounded-md bg-card/50">
+                                  <Button variant="link" className="p-0 h-auto font-medium text-sm" onClick={() => setSidebarSelection({ type: 'balda', id: balda.id, estanteriaId: est.id, name: balda.name })}>
+                                    <Layers className="mr-1 h-3.5 w-3.5"/>{balda.name}
+                                  </Button>
+                                  {(balda.looseItems || []).length > 0 && (
+                                    <ul className="list-disc list-inside pl-6 text-xs">
+                                      {(balda.looseItems || []).map(item => (
+                                        <li key={item.id} className="truncate">
+                                          <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
+                                          {item.name}
+                                          {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {boxesOnBalda.length > 0 && (
+                                    <ul className="list-disc list-inside pl-6 text-xs">
+                                      {boxesOnBalda.map(box => (
+                                         <li key={box.id} className="truncate">
+                                            <Archive className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
+                                            <Button variant="link" size="sm" className="p-0 h-auto text-xs inline" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
+                                                {box.name}
+                                            </Button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {((balda.looseItems || []).length === 0 && boxesOnBalda.length === 0) && <p className="pl-6 text-xs text-muted-foreground italic">(Balda vacía)</p>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                       {((est.looseItems || []).length === 0 && directBoxes.length === 0 && (est.baldas || []).length === 0) && (
+                        <p className="text-sm text-muted-foreground italic text-center py-4">Esta estantería está vacía.</p>
+                       )}
+                    </CardContent>
+                    <CardFooter className="pt-2 border-t">
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
+                        <Server className="mr-2 h-4 w-4"/> Ver/Gestionar Estantería Completa
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Library className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <h2 className="text-2xl font-semibold text-muted-foreground mb-2">No hay estanterías</h2>
+              <p className="text-muted-foreground">Crea tu primera estantería para organizar tus objetos.</p>
+              {filter && <Button variant="link" onClick={() => setFilter('')} className="mt-4">Limpiar filtro</Button>}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-semibold mb-4 flex items-center"><ArchiveRestore className="mr-3 h-7 w-7 text-primary"/>Cajas Sin Ubicar ({filteredUnassignedBoxes.length})</h2>
+          {filteredUnassignedBoxes.length > 0 ? (
+            viewMode === 'card' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredUnassignedBoxes.map(box => (
+                    <BoxCard
+                    key={box.id}
+                    box={box}
+                    onAddItem={handleAddItemToBox}
+                    onUpdateItem={handleUpdateItemInBox}
+                    onDeleteItem={handleDeleteItemFromBox}
+                    onDeleteBox={handleDeleteBox}
+                    onUpdateBoxName={handleUpdateBoxName}
+                    onUnassignBox={handleUnassignBox}
+                    totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
+                    />
+                ))}
+                </div>
+            ) : (
+                <ListView boxes={filteredUnassignedBoxes} isFilteredView={!!filter} allItemsCount={unassignedBoxes.length} />
+            )
+          ) : (
+            <div className="text-center py-12">
+              <PackageSearch className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <h2 className="text-2xl font-semibold text-muted-foreground mb-2">No hay cajas sin ubicar</h2>
+              <p className="text-muted-foreground">{filter ? "Prueba a cambiar el filtro." : "Todas tus cajas están ubicadas o no tienes cajas."}</p>
+              {filter && <Button variant="link" onClick={() => setFilter('')} className="mt-4">Limpiar filtro</Button>}
+            </div>
+          )}
+        </section>
       </div>
     );
   };
@@ -1070,3 +1249,5 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
+
+    
