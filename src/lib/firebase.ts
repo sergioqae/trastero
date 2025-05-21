@@ -13,11 +13,23 @@ const firebaseConfig = {
 };
 
 // For debugging purposes:
-if (!firebaseConfig.apiKey) {
-  console.error("Firebase API Key is UNDEFINED. Make sure NEXT_PUBLIC_FIREBASE_API_KEY is set in your .env.local file and the server is restarted.");
+const missingKeys: string[] = [];
+if (!firebaseConfig.apiKey) missingKeys.push("apiKey (NEXT_PUBLIC_FIREBASE_API_KEY)");
+if (!firebaseConfig.authDomain) missingKeys.push("authDomain (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)");
+if (!firebaseConfig.projectId) missingKeys.push("projectId (NEXT_PUBLIC_FIREBASE_PROJECT_ID)");
+if (!firebaseConfig.storageBucket) missingKeys.push("storageBucket (NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)");
+if (!firebaseConfig.messagingSenderId) missingKeys.push("messagingSenderId (NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID)");
+if (!firebaseConfig.appId) missingKeys.push("appId (NEXT_PUBLIC_FIREBASE_APP_ID)");
+
+if (missingKeys.length > 0) {
+  console.error(
+    `Firebase Initialization Error: The following Firebase config keys are UNDEFINED: ${missingKeys.join(', ')}. ` +
+    `Please ensure all NEXT_PUBLIC_FIREBASE_... variables are correctly set in your .env.local file (in the project root) ` +
+    `and that you have completely RESTARTED your Next.js development server after any changes to .env.local.`
+  );
 } else {
   // Log a part of the key to confirm it's loaded, but be careful not to log the full key.
-  console.log("Firebase API Key is LOADED and starts with:", firebaseConfig.apiKey.substring(0, 5));
+  console.log("Firebase config keys appear to be loaded. API Key starts with:", firebaseConfig.apiKey!.substring(0, 5));
 }
 
 let app: FirebaseApp;
@@ -35,4 +47,3 @@ db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 export { app, auth, db, googleProvider };
-
