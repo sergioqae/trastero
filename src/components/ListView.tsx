@@ -7,14 +7,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ListViewProps {
   boxes: Box[];
+  isFilteredView?: boolean; // To adjust display message if items are filtered
 }
 
-export function ListView({ boxes }: ListViewProps) {
-  // La lógica de "no hay cajas" o "no hay resultados" se maneja principalmente en HomePage.
-  // Esta vista asume que `boxes` contiene elementos para mostrar.
-
+export function ListView({ boxes, isFilteredView }: ListViewProps) {
   return (
-    <ScrollArea className="h-[calc(100vh-300px)] pr-4"> {/* Ajusta la altura según sea necesario y añade padding para la barra de scroll */}
+    <ScrollArea className="h-[calc(100vh-300px)] pr-4">
       <div className="space-y-4">
         {boxes.map((box) => (
           <Card key={box.id} className="shadow-sm border border-border/70">
@@ -37,7 +35,9 @@ export function ListView({ boxes }: ListViewProps) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-muted-foreground text-sm italic">Esta caja está vacía.</p>
+                <p className="text-muted-foreground text-sm italic">
+                  {isFilteredView ? "No hay objetos coincidentes con el filtro en esta caja." : "Esta caja está vacía."}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -46,3 +46,5 @@ export function ListView({ boxes }: ListViewProps) {
     </ScrollArea>
   );
 }
+
+    

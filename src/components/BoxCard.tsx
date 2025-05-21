@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Box, Item } from "@/lib/types";
@@ -30,9 +31,13 @@ interface BoxCardProps {
   onUpdateItem: (boxId: string, itemId: string, itemData: Omit<Item, "id">) => void;
   onDeleteItem: (boxId: string, itemId: string) => void;
   onDeleteBox: (boxId: string) => void;
+  isFilteredView?: boolean; // To adjust display if items are filtered
 }
 
-export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBox }: BoxCardProps) {
+export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBox, isFilteredView }: BoxCardProps) {
+  const itemsToShow = box.items;
+  const totalItemsInBoxBeforeFilter = box.items.length; // This might need to come from original box if items are pre-filtered
+
   return (
     <Card className="w-full shadow-lg bg-card border border-border/70">
       <CardHeader className="border-b">
@@ -71,13 +76,16 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
           </div>
         </div>
         <CardDescription className="pt-1">
-          {box.items.length} objeto{box.items.length === 1 ? '' : 's'} en esta caja.
+          {isFilteredView && itemsToShow.length !== totalItemsInBoxBeforeFilter 
+            ? `${itemsToShow.length} objeto(s) coincidente(s) en esta caja.`
+            : `${itemsToShow.length} objeto${itemsToShow.length === 1 ? '' : 's'} en esta caja.`
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        {box.items.length > 0 ? (
+        {itemsToShow.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {box.items.map((item) => (
+            {itemsToShow.map((item) => (
               <ItemCard
                 key={item.id}
                 item={item}
@@ -88,9 +96,13 @@ export function BoxCard({ box, onAddItem, onUpdateItem, onDeleteItem, onDeleteBo
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-center py-4">Esta caja está vacía. ¡Añade algunos objetos!</p>
+          <p className="text-muted-foreground text-center py-4">
+            {isFilteredView ? "No hay objetos coincidentes con el filtro en esta caja." : "Esta caja está vacía. ¡Añade algunos objetos!"}
+          </p>
         )}
       </CardContent>
     </Card>
   );
 }
+
+    
