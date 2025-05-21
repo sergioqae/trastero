@@ -10,7 +10,7 @@ import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home, Loader2, AlertTriangle } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home, Loader2, AlertTriangle, LogIn } from "lucide-react"; // Added LogIn
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -779,7 +779,7 @@ export default function HomePage() {
         doc.setFont(undefined, 'normal');
         doc.setFontSize(10);
 
-        const estLooseItems = est.looseItems || [];
+        const estLooseItems = (est.looseItems || []).sort((a,b)=>a.name.localeCompare(b.name));
         if (estLooseItems.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.text("  Objetos Sueltos (en Estantería):", 20, yPosition); yPosition += 5;
@@ -791,7 +791,7 @@ export default function HomePage() {
           });
         }
         
-        const boxesDirectlyOnEstanteria = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && !box.location?.baldaId);
+        const boxesDirectlyOnEstanteria = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && !box.location?.baldaId).sort((a,b)=>a.name.localeCompare(b.name));
         if (boxesDirectlyOnEstanteria.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.text("  Cajas (en Estantería):", 20, yPosition); yPosition += 5;
@@ -1326,7 +1326,7 @@ export default function HomePage() {
                           </AlertDialog>
                       </div>
                       <CardDescription className="pt-1 text-xs">
-                        {estLooseItems.length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {estBaldas.length} balda(s).
+                        {(est.looseItems || []).length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {(est.baldas || []).length} balda(s).
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-3 pt-3 text-sm">
@@ -1335,7 +1335,7 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Package className="mr-2 h-4 w-4" />Objetos Sueltos Directos:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {estLooseItems.slice(0, filter ? undefined : 3).map(item => (
+                            {estLooseItems.map(item => ( // Removed slice for simplicity
                               <li key={item.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
                                   {item.name}
@@ -1343,7 +1343,6 @@ export default function HomePage() {
                                 {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
                               </li>
                             ))}
-                             {!filter && estLooseItems.length > 3 && <li className="text-muted-foreground italic">...y {estLooseItems.length - 3} más</li>}
                           </ul>
                         </div>
                       )}
@@ -1352,14 +1351,13 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Archive className="mr-2 h-4 w-4" />Cajas Directas:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {directBoxes.slice(0, filter ? undefined : 3).map(box => (
+                            {directBoxes.map(box => ( // Removed slice for simplicity
                               <li key={box.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
                                   {box.name}
                                 </Button>
                               </li>
                             ))}
-                            {!filter && directBoxes.length > 3 && <li className="text-muted-foreground italic">...y {directBoxes.length - 3} más</li>}
                           </ul>
                         </div>
                       )}
@@ -1368,7 +1366,7 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Layers className="mr-2 h-4 w-4" />Baldas:</h4>
                           <div className="space-y-2 pl-2">
-                            {estBaldas.slice(0, filter ? undefined : 2).map(balda => {
+                            {estBaldas.map(balda => { // Removed slice for simplicity
                               const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id && b.location?.estanteriaId === est.id);
                               const baldaLooseItems = (balda.looseItems || []);
                               return (
@@ -1380,19 +1378,18 @@ export default function HomePage() {
                                     <>
                                       {baldaLooseItems.length > 0 && (
                                         <ul className="list-disc list-inside pl-6 text-xs">
-                                          {baldaLooseItems.slice(0, filter ? undefined : 2).map(item => (
+                                          {baldaLooseItems.map(item => ( // Removed slice for simplicity
                                             <li key={item.id} className="truncate">
                                               <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
                                               {item.name}
                                               {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
                                             </li>
                                           ))}
-                                          {!filter && baldaLooseItems.length > 2 && <li className="text-muted-foreground italic">...y {baldaLooseItems.length - 2} objeto(s) más</li>}
                                         </ul>
                                       )}
                                       {boxesOnBalda.length > 0 && (
                                         <ul className="list-disc list-inside pl-6 text-xs">
-                                          {boxesOnBalda.slice(0, filter ? undefined : 2).map(box => (
+                                          {boxesOnBalda.map(box => ( // Removed slice for simplicity
                                             <li key={box.id} className="truncate">
                                                 <Archive className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
                                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs inline" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
@@ -1400,7 +1397,6 @@ export default function HomePage() {
                                                 </Button>
                                             </li>
                                           ))}
-                                          {!filter && boxesOnBalda.length > 2 && <li className="text-muted-foreground italic">...y {boxesOnBalda.length - 2} caja(s) más</li>}
                                         </ul>
                                       )}
                                     </>
@@ -1408,11 +1404,10 @@ export default function HomePage() {
                                 </div>
                               );
                             })}
-                            {!filter && estBaldas.length > 2 && <div className="p-2 text-muted-foreground italic text-xs">...y {estBaldas.length - 2} balda(s) más</div>}
                           </div>
                         </div>
                       )}
-                       {(estLooseItems.length === 0 && directBoxes.length === 0 && estBaldas.length === 0) && (
+                       {((est.looseItems || []).length === 0 && directBoxes.length === 0 && (est.baldas || []).length === 0) && (
                         <p className="text-sm text-muted-foreground italic text-center py-4">Esta estantería está vacía.</p>
                        )}
                     </CardContent>
@@ -1518,7 +1513,7 @@ export default function HomePage() {
                 </div>
                  {currentUser && (
                   <div className="flex flex-wrap gap-2 items-center">
-                    {(sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes') && (
+                    {(sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || (sidebarSelection.type === 'all-estanterias' && filteredUnassignedBoxes.length > 0)) && (
                         <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
                             {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
                             {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
@@ -1561,3 +1556,6 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
+
+
+  
