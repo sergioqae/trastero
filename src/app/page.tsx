@@ -1,16 +1,16 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Box, Item, Estanteria, Balda } from "@/lib/types";
-import useLocalStorage from "@/hooks/useLocalStorage";
+// import useLocalStorage from "@/hooks/useLocalStorage"; // Replaced by Firebase
 import { Header } from "@/components/layout/Header";
 import { CreateBoxDialog } from "@/components/CreateBoxDialog";
 import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home, Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -42,9 +42,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+import { auth, db, signInWithGoogle, signOutUser } from "@/lib/firebase";
+import type { User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, writeBatch, query, orderBy, where } from "firebase/firestore";
+
+
 export default function HomePage() {
-  const [boxes, setBoxes] = useLocalStorage<Box[]>("trastero-app-boxes", []);
-  const [estanterias, setEstanterias] = useLocalStorage<Estanteria[]>("trastero-app-estanterias", []);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [loadingData, setLoadingData] = useState(false);
+
+  const [boxes, setBoxes] = useState<Box[]>([]);
+  const [estanterias, setEstanterias] = useState<Estanteria[]>([]);
+  
   const [filter, setFilter] = useState("");
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentYear, setCurrentYear] = useState<string | null>(null);
@@ -56,302 +67,503 @@ export default function HomePage() {
     setCurrentYear(new Date().getFullYear().toString());
   }, []);
 
-  // --- ESTANTERIA Management ---
-  const handleCreateEstanteria = (estanteriaData: Omit<Estanteria, "id" | "baldas" | "looseItems">) => {
-    const newEstanteria: Estanteria = { ...estanteriaData, id: crypto.randomUUID(), baldas: [], looseItems: [] };
-    setEstanterias(prev => [...prev, newEstanteria].sort((a,b) => a.name.localeCompare(b.name)));
-    toast({ title: "Estantería Creada", description: `La estantería "${newEstanteria.name}" ha sido creada.` });
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setLoadingAuth(false);
+      if (!user) {
+        setEstanterias([]);
+        setBoxes([]);
+        setSidebarSelection({ type: 'all-estanterias' }); // Reset view
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch data from Firestore when user logs in
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return;
+    setLoadingData(true);
+    try {
+      const estanteriasCol = collection(db, `users/${currentUser.uid}/estanterias`);
+      const estanteriasQuery = query(estanteriasCol, orderBy("name"));
+      const estanteriasSnapshot = await getDocs(estanteriasQuery);
+      const estanteriasList = estanteriasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estanteria));
+      setEstanterias(estanteriasList);
+
+      const boxesCol = collection(db, `users/${currentUser.uid}/boxes`);
+      const boxesQuery = query(boxesCol, orderBy("name"));
+      const boxesSnapshot = await getDocs(boxesQuery);
+      const boxesList = boxesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Box));
+      setBoxes(boxesList);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
+    }
+    setLoadingData(false);
+  }, [currentUser, toast]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser, fetchData]);
+
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      toast({ title: "Inicio de Sesión Exitoso", description: "¡Bienvenido/a de nuevo!" });
+    } catch (error) {
+      toast({ title: "Error de Inicio de Sesión", description: "No se pudo iniciar sesión con Google.", variant: "destructive" });
+    }
   };
 
-  const handleUpdateEstanteriaName = (estanteriaId: string, newName: string) => {
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      toast({ title: "Sesión Cerrada", description: "Has cerrado sesión correctamente." });
+    } catch (error) {
+      toast({ title: "Error al Cerrar Sesión", description: "No se pudo cerrar la sesión.", variant: "destructive" });
+    }
+  };
+
+
+  // --- ESTANTERIA Management ---
+  const handleCreateEstanteria = async (estanteriaData: Omit<Estanteria, "id" | "baldas" | "looseItems">) => {
+    if (!currentUser) return;
+    const newEstanteria: Omit<Estanteria, "id"> = { ...estanteriaData, baldas: [], looseItems: [] };
+    try {
+      const docRef = await addDoc(collection(db, `users/${currentUser.uid}/estanterias`), newEstanteria);
+      setEstanterias(prev => [...prev, { ...newEstanteria, id: docRef.id }].sort((a,b) => a.name.localeCompare(b.name)));
+      toast({ title: "Estantería Creada", description: `La estantería "${newEstanteria.name}" ha sido creada.` });
+    } catch (error) {
+      console.error("Error creando estantería:", error);
+      toast({ title: "Error", description: "No se pudo crear la estantería.", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateEstanteriaName = async (estanteriaId: string, newName: string) => {
+    if (!currentUser) return;
     const oldEstanteria = estanterias.find(e => e.id === estanteriaId);
     if (!oldEstanteria) return;
 
-    setEstanterias(prev => 
-      prev.map(e => 
-        e.id === estanteriaId ? { ...e, name: newName, looseItems: e.looseItems || [], baldas: e.baldas || [] } : e
-      ).sort((a,b) => a.name.localeCompare(b.name))
-    );
-    setBoxes(prevBoxes => 
-      prevBoxes.map(b => 
-        b.location?.estanteriaId === estanteriaId ? { ...b, location: { ...(b.location!), estanteriaName: newName } } : b
-      )
-    );
-    if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
-      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
-    } else if (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaId) {
-       // If a balda of this estanteria is selected, its title will update via selectedEstanteria dependency
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { name: newName });
+
+      setEstanterias(prev => 
+        prev.map(e => 
+          e.id === estanteriaId ? { ...e, name: newName, looseItems: e.looseItems || [], baldas: e.baldas || [] } : e
+        ).sort((a,b) => a.name.localeCompare(b.name))
+      );
+      
+      // Update estanteriaName in boxes
+      const batch = writeBatch(db);
+      const updatedBoxesState: Box[] = [];
+      let boxesUpdatedInFirestore = false;
+
+      boxes.forEach(b => {
+        if (b.location?.estanteriaId === estanteriaId) {
+          const updatedBox = { ...b, location: { ...(b.location!), estanteriaName: newName } };
+          updatedBoxesState.push(updatedBox);
+          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, b.id);
+          batch.update(boxRef, { "location.estanteriaName": newName });
+          boxesUpdatedInFirestore = true;
+        } else {
+          updatedBoxesState.push(b);
+        }
+      });
+      if (boxesUpdatedInFirestore) await batch.commit();
+      setBoxes(updatedBoxesState);
+
+
+      if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
+        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
+      }
+      toast({ title: "Estantería Actualizada", description: `Nombre cambiado a "${newName}".` });
+    } catch (error) {
+      console.error("Error actualizando nombre de estantería:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el nombre de la estantería.", variant: "destructive" });
     }
-    toast({ title: "Estantería Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteEstanteria = (estanteriaIdToDelete: string) => {
+  const handleDeleteEstanteria = async (estanteriaIdToDelete: string) => {
+    if (!currentUser) return;
     const estanteria = estanterias.find(e => e.id === estanteriaIdToDelete);
     if (!estanteria) return;
 
-    const updatedBoxes = boxes.map(box => {
-      if (box.location?.estanteriaId === estanteriaIdToDelete) {
-        return { ...box, location: null }; 
-      }
-      return box;
-    });
-    setBoxes(updatedBoxes);
+    try {
+      await deleteDoc(doc(db, `users/${currentUser.uid}/estanterias`, estanteriaIdToDelete));
+      
+      const batch = writeBatch(db);
+      let boxesNeedUpdate = false;
+      const updatedBoxes = boxes.map(box => {
+        if (box.location?.estanteriaId === estanteriaIdToDelete) {
+          boxesNeedUpdate = true;
+          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, box.id);
+          batch.update(boxRef, { location: null });
+          return { ...box, location: null }; 
+        }
+        return box;
+      });
+      if (boxesNeedUpdate) await batch.commit();
+      setBoxes(updatedBoxes);
 
-    setEstanterias(prev => prev.filter(e => e.id !== estanteriaIdToDelete));
-    if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaIdToDelete) {
-      setSidebarSelection({ type: 'all-estanterias' });
-    } else if (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaIdToDelete) {
-      setSidebarSelection({ type: 'all-estanterias' });
+      setEstanterias(prev => prev.filter(e => e.id !== estanteriaIdToDelete));
+      if ((sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaIdToDelete) ||
+          (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaIdToDelete)) {
+        setSidebarSelection({ type: 'all-estanterias' });
+      }
+      toast({ title: "Estantería Eliminada", description: `La estantería "${estanteria.name}" ha sido eliminada.`, variant: "destructive" });
+    } catch (error) {
+      console.error("Error eliminando estantería:", error);
+      toast({ title: "Error", description: "No se pudo eliminar la estantería.", variant: "destructive" });
     }
-    toast({ title: "Estantería Eliminada", description: `La estantería "${estanteria.name}" y todo su contenido han sido eliminados.`, variant: "destructive" });
   };
 
   // --- LOOSE ITEM Management on Estanteria ---
-  const handleAddLooseItemToEstanteria = (estanteriaId: string, itemData: Omit<Item, "id">) => {
-    const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? { ...est, looseItems: [...(est.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
-          : est
-      )
-    );
-    toast({ title: "Objeto Añadido a Estantería", description: `El objeto "${newItem.name}" ha sido añadido.` });
-  };
-
-  const handleUpdateLooseItemOnEstanteria = (estanteriaId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    setEstanterias(prevEstanterias =>
-        prevEstanterias.map(est => 
-            est.id === estanteriaId 
-            ? {
-                ...est,
-                looseItems: (est.looseItems || []).map(item => 
-                    item.id === itemId ? { ...item, ...itemData } : item
-                ).sort((a,b)=>a.name.localeCompare(b.name))
-              }
-            : est
-        )
-    );
-    toast({ title: "Objeto de Estantería Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-  };
-  
-  const handleDeleteLooseItemFromEstanteria = (estanteriaId: string, itemId: string) => {
-    let itemName = "El objeto seleccionado";
-    const est = estanterias.find(e => e.id === estanteriaId);
-    if (est && est.looseItems) {
-        const item = est.looseItems.find(i => i.id === itemId);
-        if (item) itemName = item.name;
-    }
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? { ...est, looseItems: (est.looseItems || []).filter(item => item.id !== itemId) }
-          : est
-      )
-    );
-    toast({ title: "Objeto Eliminado de Estantería", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
-  };
-
-
-  // --- BALDA Management ---
-  const handleCreateBalda = (estanteriaId: string, baldaData: Omit<Balda, "id" | "looseItems">) => {
-    const newBalda: Balda = { ...baldaData, id: crypto.randomUUID(), looseItems: [] };
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? { ...est, baldas: [...(est.baldas || []), newBalda].sort((a,b) => a.name.localeCompare(b.name)) }
-          : est
-      )
-    );
-    toast({ title: "Balda Creada", description: `La balda "${newBalda.name}" ha sido añadida.` });
-  };
-
-  const handleUpdateBaldaName = (estanteriaId: string, baldaId: string, newName: string) => {
+  const handleAddLooseItemToEstanteria = async (estanteriaId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
     const estanteria = estanterias.find(e => e.id === estanteriaId);
     if (!estanteria) return;
-    const oldBalda = (estanteria.baldas || []).find(b => b.id === baldaId);
-    if (!oldBalda) return;
 
-    setEstanterias(prev => 
-        prev.map(est => 
-            est.id === estanteriaId 
-            ? { ...est, baldas: (est.baldas || []).map(b => b.id === baldaId ? { ...b, name: newName, looseItems: b.looseItems || [] } : b).sort((a,b) => a.name.localeCompare(b.name)) } 
-            : est
-        )
-    );
-    setBoxes(prevBoxes => 
-      prevBoxes.map(b => 
-        (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId) 
-        ? { ...b, location: { ...(b.location!), baldaName: newName } } 
-        : b
-      )
-    );
-    if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
-      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
+    const newItem: Item = { ...itemData, id: crypto.randomUUID() };
+    const updatedLooseItems = [...(estanteria.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name));
+    
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
+      toast({ title: "Objeto Añadido a Estantería", description: `El objeto "${newItem.name}" ha sido añadido.` });
+    } catch (error) {
+      console.error("Error añadiendo objeto suelto a estantería:", error);
+      toast({ title: "Error", description: "No se pudo añadir el objeto a la estantería.", variant: "destructive" });
     }
-    toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteBalda = (estanteriaId: string, baldaIdToDelete: string) => {
+  const handleUpdateLooseItemOnEstanteria = async (estanteriaId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
     const estanteria = estanterias.find(e => e.id === estanteriaId);
-    const balda = (estanteria?.baldas || []).find(b => b.id === baldaIdToDelete);
-    if (!balda || !estanteria) return;
+    if (!estanteria) return;
 
-    const updatedBoxes = boxes.map(box => {
-      if (box.location?.estanteriaId === estanteriaId && box.location?.baldaId === baldaIdToDelete) {
-        return { ...box, location: null };
-      }
-      return box;
-    });
-    setBoxes(updatedBoxes);
-    
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? { ...est, baldas: (est.baldas || []).filter(b => b.id !== baldaIdToDelete) }
-          : est
-      )
-    );
-    if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaIdToDelete) {
-      setSidebarSelection({ type: 'estanteria', id: estanteria.id, name: estanteria.name, estanteriaId: estanteria.id });
+    const updatedLooseItems = (estanteria.looseItems || [])
+      .map(item => item.id === itemId ? { ...item, ...itemData } : item)
+      .sort((a,b)=>a.name.localeCompare(b.name));
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
+      toast({ title: "Objeto de Estantería Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
+    } catch (error) {
+      console.error("Error actualizando objeto suelto en estantería:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el objeto de la estantería.", variant: "destructive" });
     }
-    toast({ title: "Balda Eliminada", description: `La balda "${balda.name}" ha sido eliminada.`, variant: "destructive" });
+  };
+  
+  const handleDeleteLooseItemFromEstanteria = async (estanteriaId: string, itemId: string) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+
+    const itemName = (estanteria.looseItems || []).find(i => i.id === itemId)?.name || "El objeto seleccionado";
+    const updatedLooseItems = (estanteria.looseItems || []).filter(item => item.id !== itemId);
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
+      toast({ title: "Objeto Eliminado de Estantería", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
+    } catch (error)
+     {
+      console.error("Error eliminando objeto suelto de estantería:", error);
+      toast({ title: "Error", description: "No se pudo eliminar el objeto de la estantería.", variant: "destructive" });
+    }
+  };
+
+  // --- BALDA Management ---
+  const handleCreateBalda = async (estanteriaId: string, baldaData: Omit<Balda, "id" | "looseItems">) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+
+    const newBalda: Balda = { ...baldaData, id: crypto.randomUUID(), looseItems: [] };
+    const updatedBaldas = [...(estanteria.baldas || []), newBalda].sort((a,b) => a.name.localeCompare(b.name));
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
+      toast({ title: "Balda Creada", description: `La balda "${newBalda.name}" ha sido añadida.` });
+    } catch (error) {
+      console.error("Error creando balda:", error);
+      toast({ title: "Error", description: "No se pudo crear la balda.", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateBaldaName = async (estanteriaId: string, baldaId: string, newName: string) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+
+    const updatedBaldas = (estanteria.baldas || [])
+      .map(b => b.id === baldaId ? { ...b, name: newName, looseItems: b.looseItems || [] } : b)
+      .sort((a,b) => a.name.localeCompare(b.name));
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
+
+      // Update baldaName in boxes
+      const batch = writeBatch(db);
+      const updatedBoxesState: Box[] = [];
+      let boxesUpdatedInFirestore = false;
+      boxes.forEach(b => {
+        if (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId) {
+          const updatedBox = { ...b, location: { ...(b.location!), baldaName: newName } };
+          updatedBoxesState.push(updatedBox);
+          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, b.id);
+          batch.update(boxRef, { "location.baldaName": newName });
+          boxesUpdatedInFirestore = true;
+        } else {
+          updatedBoxesState.push(b);
+        }
+      });
+      if (boxesUpdatedInFirestore) await batch.commit();
+      setBoxes(updatedBoxesState);
+
+      if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
+        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
+      }
+      toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
+    } catch (error) {
+      console.error("Error actualizando nombre de balda:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el nombre de la balda.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBalda = async (estanteriaId: string, baldaIdToDelete: string) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+    const balda = (estanteria.baldas || []).find(b => b.id === baldaIdToDelete);
+    if (!balda) return;
+
+    const updatedBaldas = (estanteria.baldas || []).filter(b => b.id !== baldaIdToDelete);
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      
+      const batch = writeBatch(db);
+      let boxesNeedUpdate = false;
+      const updatedBoxesState = boxes.map(box => {
+        if (box.location?.estanteriaId === estanteriaId && box.location?.baldaId === baldaIdToDelete) {
+          boxesNeedUpdate = true;
+          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, box.id);
+          batch.update(boxRef, { location: null });
+          return { ...box, location: null };
+        }
+        return box;
+      });
+      if (boxesNeedUpdate) await batch.commit();
+      setBoxes(updatedBoxesState);
+      
+      setEstanterias(prevEstanterias =>
+        prevEstanterias.map(est =>
+          est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est
+        )
+      );
+      if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaIdToDelete) {
+        setSidebarSelection({ type: 'estanteria', id: estanteria.id, name: estanteria.name, estanteriaId: estanteria.id });
+      }
+      toast({ title: "Balda Eliminada", description: `La balda "${balda.name}" ha sido eliminada.`, variant: "destructive" });
+    } catch (error) {
+      console.error("Error eliminando balda:", error);
+      toast({ title: "Error", description: "No se pudo eliminar la balda.", variant: "destructive" });
+    }
   };
 
   // --- LOOSE ITEM Management on Balda ---
-  const handleAddLooseItemToBalda = (estanteriaId: string, baldaId: string, itemData: Omit<Item, "id">) => {
+  const handleAddLooseItemToBalda = async (estanteriaId: string, baldaId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+
     const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? {
-              ...est,
-              baldas: (est.baldas || []).map(balda =>
-                balda.id === baldaId
-                  ? { ...balda, looseItems: [...(balda.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
-                  : balda
-              ),
-            }
-          : est
-      )
+    const updatedBaldas = (estanteria.baldas || []).map(balda =>
+      balda.id === baldaId
+        ? { ...balda, looseItems: [...(balda.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
+        : balda
     );
-    toast({ title: "Objeto Añadido a Balda", description: `El objeto "${newItem.name}" ha sido añadido.` });
-  };
-
-  const handleUpdateLooseItemOnBalda = (estanteriaId: string, baldaId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    setEstanterias(prevEstanterias =>
-        prevEstanterias.map(est => 
-            est.id === estanteriaId 
-            ? {
-                ...est,
-                baldas: (est.baldas || []).map(balda => 
-                    balda.id === baldaId
-                    ? {
-                        ...balda,
-                        looseItems: (balda.looseItems || []).map(item => 
-                            item.id === itemId ? { ...item, ...itemData } : item
-                        ).sort((a,b)=>a.name.localeCompare(b.name))
-                      }
-                    : balda
-                )
-              }
-            : est
-        )
-    );
-    toast({ title: "Objeto de Balda Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-  };
-
-  const handleDeleteLooseItemFromBalda = (estanteriaId: string, baldaId: string, itemId: string) => {
-    let itemName = "El objeto seleccionado";
-    const est = estanterias.find(e => e.id === estanteriaId);
-    const balda = (est?.baldas || []).find(b => b.id === baldaId);
-    if (balda && balda.looseItems) {
-        const item = balda.looseItems.find(i => i.id === itemId);
-        if (item) itemName = item.name;
+    
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
+      toast({ title: "Objeto Añadido a Balda", description: `El objeto "${newItem.name}" ha sido añadido.` });
+    } catch (error) {
+      console.error("Error añadiendo objeto suelto a balda:", error);
+      toast({ title: "Error", description: "No se pudo añadir el objeto a la balda.", variant: "destructive" });
     }
-    setEstanterias(prevEstanterias =>
-      prevEstanterias.map(est =>
-        est.id === estanteriaId
-          ? {
-              ...est,
-              baldas: (est.baldas || []).map(balda =>
-                balda.id === baldaId
-                  ? { ...balda, looseItems: (balda.looseItems || []).filter(item => item.id !== itemId) }
-                  : balda
-              ),
-            }
-          : est
-      )
-    );
-    toast({ title: "Objeto Eliminado de Balda", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
   };
 
-  // --- BOX Management (Create, Delete, Item in Box) ---
-  const handleCreateBox = (boxData: Omit<Box, "id" | "items" | "location">) => {
-    const newBox: Box = { ...boxData, id: crypto.randomUUID(), items: [], location: null };
-    setBoxes(prevBoxes => [newBox, ...prevBoxes].sort((a, b) => a.name.localeCompare(b.name)));
-    toast({ title: "Caja Creada", description: `La caja "${newBox.name}" ha sido creada.` });
-  };
+  const handleUpdateLooseItemOnBalda = async (estanteriaId: string, baldaId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
 
-  const handleUpdateBoxName = (boxId: string, newName: string) => {
-    setBoxes(prev => 
-      prev.map(b => 
-        b.id === boxId ? { ...b, name: newName } : b
-      ).sort((a,b) => a.name.localeCompare(b.name))
+    const updatedBaldas = (estanteria.baldas || []).map(balda =>
+      balda.id === baldaId
+        ? { ...balda, looseItems: (balda.looseItems || []).map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) }
+        : balda
     );
-    if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
-      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
+    
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
+      toast({ title: "Objeto de Balda Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
+    } catch (error) {
+      console.error("Error actualizando objeto suelto en balda:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el objeto de la balda.", variant: "destructive" });
     }
-    toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteBox = (boxIdToDelete: string) => {
+  const handleDeleteLooseItemFromBalda = async (estanteriaId: string, baldaId: string, itemId: string) => {
+    if (!currentUser) return;
+    const estanteria = estanterias.find(e => e.id === estanteriaId);
+    if (!estanteria) return;
+    const balda = (estanteria.baldas || []).find(b => b.id === baldaId);
+    const itemName = balda?.looseItems?.find(i => i.id === itemId)?.name || "El objeto seleccionado";
+
+    const updatedBaldas = (estanteria.baldas || []).map(b =>
+      b.id === baldaId
+        ? { ...b, looseItems: (b.looseItems || []).filter(item => item.id !== itemId) }
+        : b
+    );
+
+    try {
+      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
+      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
+      toast({ title: "Objeto Eliminado de Balda", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
+    } catch (error) {
+      console.error("Error eliminando objeto suelto de balda:", error);
+      toast({ title: "Error", description: "No se pudo eliminar el objeto de la balda.", variant: "destructive" });
+    }
+  };
+
+  // --- BOX Management ---
+  const handleCreateBox = async (boxData: Omit<Box, "id" | "items" | "location">) => {
+    if (!currentUser) return;
+    const newBoxData: Omit<Box, "id"> = { ...boxData, items: [], location: null };
+    try {
+      const docRef = await addDoc(collection(db, `users/${currentUser.uid}/boxes`), newBoxData);
+      setBoxes(prev => [{ ...newBoxData, id: docRef.id }, ...prev].sort((a,b) => a.name.localeCompare(b.name)));
+      toast({ title: "Caja Creada", description: `La caja "${newBoxData.name}" ha sido creada.` });
+    } catch (error) {
+      console.error("Error creando caja:", error);
+      toast({ title: "Error", description: "No se pudo crear la caja.", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateBoxName = async (boxId: string, newName: string) => {
+    if (!currentUser) return;
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { name: newName });
+      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, name: newName } : b).sort((a,b) => a.name.localeCompare(b.name)));
+      if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
+        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
+      }
+      toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
+    } catch (error) {
+      console.error("Error actualizando nombre de caja:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el nombre de la caja.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBox = async (boxIdToDelete: string) => {
+    if (!currentUser) return;
     const boxName = boxes.find(b => b.id === boxIdToDelete)?.name || "La caja seleccionada";
-    setBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxIdToDelete));
-    if (sidebarSelection.type === 'box' && sidebarSelection.id === boxIdToDelete) {
-      setSidebarSelection({ type: 'all-boxes' });
+    try {
+      await deleteDoc(doc(db, `users/${currentUser.uid}/boxes`, boxIdToDelete));
+      setBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxIdToDelete));
+      if (sidebarSelection.type === 'box' && sidebarSelection.id === boxIdToDelete) {
+        setSidebarSelection({ type: 'all-boxes' });
+      }
+      toast({ title: "Caja Eliminada", description: `La caja "${boxName}" y todos sus objetos han sido eliminados.`, variant: "destructive" });
+    } catch (error) {
+      console.error("Error eliminando caja:", error);
+      toast({ title: "Error", description: "No se pudo eliminar la caja.", variant: "destructive" });
     }
-    toast({ title: "Caja Eliminada", description: `La caja "${boxName}" y todos sus objetos han sido eliminados.`, variant: "destructive" });
   };
 
-  const handleAddItemToBox = (boxId: string, itemData: Omit<Item, "id">) => {
+  const handleAddItemToBox = async (boxId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
+    const box = boxes.find(b => b.id === boxId);
+    if (!box) return;
+
     const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    setBoxes(prevBoxes =>
-      prevBoxes.map(box =>
-        box.id === boxId ? { ...box, items: [...box.items, newItem].sort((a,b)=>a.name.localeCompare(b.name)) } : box
-      )
-    );
-    toast({ title: "Objeto Añadido a Caja", description: `El objeto "${newItem.name}" ha sido añadido.` });
+    const updatedItems = [...box.items, newItem].sort((a,b)=>a.name.localeCompare(b.name));
+    
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { items: updatedItems });
+      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
+      toast({ title: "Objeto Añadido a Caja", description: `El objeto "${newItem.name}" ha sido añadido.` });
+    } catch (error) {
+      console.error("Error añadiendo objeto a caja:", error);
+      toast({ title: "Error", description: "No se pudo añadir el objeto a la caja.", variant: "destructive" });
+    }
   };
   
-  const handleUpdateItemInBox = (boxId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    setBoxes(prevBoxes =>
-      prevBoxes.map(box =>
-        box.id === boxId
-          ? { ...box, items: box.items.map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) }
-          : box
-      )
-    );
-    toast({ title: "Objeto de Caja Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-  };
-
-  const handleDeleteItemFromBox = (boxId: string, itemId: string) => {
-    let itemName = "El objeto seleccionado";
+  const handleUpdateItemInBox = async (boxId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    if (!currentUser) return;
     const box = boxes.find(b => b.id === boxId);
-    if (box) {
-        const item = box.items.find(i => i.id === itemId);
-        if (item) itemName = item.name;
+    if (!box) return;
+
+    const updatedItems = box.items
+      .map(item => item.id === itemId ? { ...item, ...itemData } : item)
+      .sort((a,b)=>a.name.localeCompare(b.name));
+      
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { items: updatedItems });
+      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
+      toast({ title: "Objeto de Caja Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
+    } catch (error) {
+      console.error("Error actualizando objeto en caja:", error);
+      toast({ title: "Error", description: "No se pudo actualizar el objeto de la caja.", variant: "destructive" });
     }
-    setBoxes(prevBoxes =>
-      prevBoxes.map(b =>
-        b.id === boxId ? { ...b, items: b.items.filter(i => i.id !== itemId) } : b
-      )
-    );
-    toast({ title: "Objeto de Caja Eliminado", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
   };
 
-  // --- BOX Assignment to Location (Estanteria or Balda) ---
-  const handleAssignBoxToLocation = (boxId: string, estanteriaId: string, baldaId?: string | null) => {
+  const handleDeleteItemFromBox = async (boxId: string, itemId: string) => {
+    if (!currentUser) return;
+    const box = boxes.find(b => b.id === boxId);
+    if (!box) return;
+    const itemName = box.items.find(i => i.id === itemId)?.name || "El objeto seleccionado";
+    const updatedItems = box.items.filter(i => i.id !== itemId);
+
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { items: updatedItems });
+      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
+      toast({ title: "Objeto de Caja Eliminado", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
+    } catch (error) {
+      console.error("Error eliminando objeto de caja:", error);
+      toast({ title: "Error", description: "No se pudo eliminar el objeto de la caja.", variant: "destructive" });
+    }
+  };
+
+  // --- BOX Assignment to Location ---
+  const handleAssignBoxToLocation = async (boxId: string, estanteriaId: string, baldaId?: string | null) => {
+    if (!currentUser) return;
     const estanteria = estanterias.find(e => e.id === estanteriaId);
     if (!estanteria) {
         toast({ title: "Error", description: "Estantería no encontrada.", variant: "destructive"});
@@ -379,25 +591,40 @@ export default function HomePage() {
       locationDescription = `${estanteria.name} (directo)`;
     }
 
-    setBoxes(prevBoxes =>
-      prevBoxes.map(box =>
-        box.id === boxId ? { ...box, location: locationData } : box
-      )
-    );
-    toast({ title: "Caja Asignada", description: `La caja "${boxToAssign.name}" ha sido asignada a ${locationDescription}.` });
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { location: locationData });
+      setBoxes(prevBoxes =>
+        prevBoxes.map(box =>
+          box.id === boxId ? { ...box, location: locationData } : box
+        )
+      );
+      toast({ title: "Caja Asignada", description: `La caja "${boxToAssign.name}" ha sido asignada a ${locationDescription}.` });
+    } catch (error) {
+      console.error("Error asignando caja:", error);
+      toast({ title: "Error", description: "No se pudo asignar la caja.", variant: "destructive" });
+    }
   };
 
-  const handleUnassignBox = (boxId: string) => {
+  const handleUnassignBox = async (boxId: string) => {
+    if (!currentUser) return;
     const boxToUnassign = boxes.find(b => b.id === boxId);
     if (!boxToUnassign) return;
 
-    setBoxes(prevBoxes =>
-      prevBoxes.map(box => (box.id === boxId ? { ...box, location: null } : box))
-    );
-    toast({ title: "Caja Desasignada", description: `La caja "${boxToUnassign.name}" ahora está sin ubicar.` });
+    try {
+      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
+      await updateDoc(boxRef, { location: null });
+      setBoxes(prevBoxes =>
+        prevBoxes.map(box => (box.id === boxId ? { ...box, location: null } : box))
+      );
+      toast({ title: "Caja Desasignada", description: `La caja "${boxToUnassign.name}" ahora está sin ubicar.` });
+    } catch (error) {
+      console.error("Error desasignando caja:", error);
+      toast({ title: "Error", description: "No se pudo desasignar la caja.", variant: "destructive" });
+    }
   };
 
-
+  // Memoized sorted lists
   const sortedEstanterias = useMemo(() => {
     return [...estanterias].sort((a, b) => a.name.localeCompare(b.name));
   }, [estanterias]);
@@ -442,7 +669,6 @@ export default function HomePage() {
     }
     return [];
   }, [sortedBoxes, selectedEstanteria]);
-
 
   // Filtering logic for display
   const filteredEstanterias = useMemo(() => {
@@ -517,7 +743,6 @@ export default function HomePage() {
     );
   }, [boxesOnSelectedEstanteriaDirectly, filter]);
 
-
   const allBoxesFiltered = useMemo(() => {
      if (!filter) return sortedBoxes;
     const lowerFilter = filter.toLowerCase();
@@ -527,15 +752,18 @@ export default function HomePage() {
     );
   }, [sortedBoxes, filter]);
 
-
   const handleExportPDF = () => {
+    if (!currentUser) {
+        toast({title: "Acción no permitida", description: "Debes iniciar sesión para exportar el inventario.", variant: "destructive"});
+        return;
+    }
     const doc = new jsPDF();
     let yPosition = 15;
     const pageHeight = doc.internal.pageSize.height;
     const bottomMargin = 15;
 
     doc.setFontSize(18);
-    doc.text("Inventario Completo del Trastero", doc.internal.pageSize.width / 2, yPosition, { align: "center" });
+    doc.text(`Inventario de ${currentUser.displayName || currentUser.email}`, doc.internal.pageSize.width / 2, yPosition, { align: "center" });
     yPosition += 12;
 
     if (sortedEstanterias.length > 0) {
@@ -551,7 +779,6 @@ export default function HomePage() {
         doc.setFont(undefined, 'normal');
         doc.setFontSize(10);
 
-        // Loose items on Estanteria
         const estLooseItems = est.looseItems || [];
         if (estLooseItems.length > 0) {
           doc.setFont(undefined, 'bold');
@@ -563,7 +790,7 @@ export default function HomePage() {
             yPosition += 5;
           });
         }
-        // Boxes directly on Estanteria
+        
         const boxesDirectlyOnEstanteria = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && !box.location?.baldaId);
         if (boxesDirectlyOnEstanteria.length > 0) {
           doc.setFont(undefined, 'bold');
@@ -585,7 +812,6 @@ export default function HomePage() {
           });
         }
 
-        // Baldas
         const estBaldas = (est.baldas || []).sort((a,b) => a.name.localeCompare(b.name));
         if (estBaldas.length > 0) {
           doc.setFont(undefined, 'bold');
@@ -638,7 +864,7 @@ export default function HomePage() {
             doc.text("  (Esta estantería está vacía)", 20, yPosition); yPosition += 5;
             doc.setFont(undefined, 'normal');
         }
-        yPosition += 5; // Extra space between estanterias
+        yPosition += 5; 
       });
     } else {
       doc.setFontSize(12);
@@ -676,13 +902,23 @@ export default function HomePage() {
             }
             yPosition += 5;
         });
-    } else {
+    } else if (sortedBoxes.length > 0) { // Only show this if there are boxes in general, but all are assigned
         doc.setFontSize(12);
         doc.setFont(undefined, 'italic');
-        doc.text("No hay cajas sin ubicar.", 15, yPosition);
+        doc.text("Todas las cajas están ubicadas.", 15, yPosition);
         yPosition += 7;
         doc.setFont(undefined, 'normal');
     }
+
+
+    if (sortedEstanterias.length === 0 && sortedBoxes.length === 0) {
+        if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'italic');
+        doc.text("El trastero está completamente vacío.", 15, yPosition);
+        yPosition += 7;
+    }
+
 
     doc.save("inventario_trastero_completo.pdf");
     toast({ title: "PDF Generado", description: "El inventario completo ha sido descargado.", duration: 5000 });
@@ -698,9 +934,47 @@ export default function HomePage() {
 
 
   const renderContent = () => {
+    if (!currentUser) {
+      return (
+        <div className="text-center py-20">
+          <PackageSearch className="mx-auto h-24 w-24 text-muted-foreground mb-6" />
+          <h2 className="text-3xl font-semibold text-foreground mb-4">Bienvenido al Gestor de Trasteros</h2>
+          <p className="text-lg text-muted-foreground mb-8">Por favor, inicia sesión con Google para guardar y acceder a tu inventario.</p>
+          <Button size="lg" onClick={handleSignIn}>
+            <LogIn className="mr-2 h-5 w-5" />
+            Iniciar Sesión con Google
+          </Button>
+        </div>
+      );
+    }
+    if (loadingData) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Cargando datos de tu trastero...</p>
+        </div>
+      );
+    }
+    // If data is loaded but both estanterias and boxes are empty, it might be a new user.
+    if (currentUser && !loadingData && estanterias.length === 0 && boxes.length === 0 && sidebarSelection.type === 'all-estanterias' && !filter) {
+      return (
+         <div className="text-center py-12">
+            <PackageSearch className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Tu trastero está vacío</h2>
+            <p className="text-muted-foreground mb-6">Empieza por crear tu primera estantería o una caja.</p>
+            <div className="flex justify-center gap-4">
+                <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />
+                <CreateBoxDialog onCreateBox={handleCreateBox} />
+            </div>
+        </div>
+      );
+    }
+
+
     if (sidebarSelection.type === 'box') {
       const box = sortedBoxes.find(b => b.id === sidebarSelection.id);
       if (!box) return <p>Caja no encontrada.</p>;
+      const originalBox = boxes.find(b=>b.id === box.id); // Find original for total item count
       return (
         <BoxCard
           key={box.id}
@@ -711,7 +985,7 @@ export default function HomePage() {
           onDeleteBox={handleDeleteBox}
           onUpdateBoxName={handleUpdateBoxName}
           onUnassignBox={handleUnassignBox}
-          totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
+          totalItemsInBoxOriginal={originalBox?.items.length || 0}
         />
       );
     }
@@ -722,19 +996,23 @@ export default function HomePage() {
           {allBoxesFiltered.length > 0 ? (
              viewMode === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {allBoxesFiltered.map(box => (
-                    <BoxCard
-                    key={box.id}
-                    box={box}
-                    onAddItem={handleAddItemToBox}
-                    onUpdateItem={handleUpdateItemInBox}
-                    onDeleteItem={handleDeleteItemFromBox}
-                    onDeleteBox={handleDeleteBox}
-                    onUpdateBoxName={handleUpdateBoxName}
-                    onUnassignBox={handleUnassignBox}
-                    totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                    />
-                ))}
+                {allBoxesFiltered.map(box => {
+                    const originalBox = boxes.find(b=>b.id === box.id);
+                    return (
+                        <BoxCard
+                        key={box.id}
+                        box={box}
+                        onAddItem={handleAddItemToBox}
+                        onUpdateItem={handleUpdateItemInBox}
+                        onDeleteItem={handleDeleteItemFromBox}
+                        onDeleteBox={handleDeleteBox}
+                        onUpdateBoxName={handleUpdateBoxName}
+                        onUnassignBox={handleUnassignBox}
+                        totalItemsInBoxOriginal={originalBox?.items.length || 0}
+                        isFilteredView={!!filter}
+                        />
+                    );
+                })}
                 </div>
              ) : (
                 <ListView boxes={allBoxesFiltered} isFilteredView={!!filter} allItemsCount={boxes.reduce((acc, curr) => acc + curr.items.length, 0)} />
@@ -743,7 +1021,7 @@ export default function HomePage() {
             <div className="text-center py-12">
               <PackageSearch className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
               <h2 className="text-2xl font-semibold text-muted-foreground mb-2">No hay cajas</h2>
-              <p className="text-muted-foreground">Crea tu primera caja.</p>
+              <p className="text-muted-foreground">{filter ? "Ninguna caja coincide con tu filtro." : "Crea tu primera caja para empezar."}</p>
               {filter && <Button variant="link" onClick={() => setFilter('')} className="mt-4">Limpiar filtro</Button>}
             </div>
           )}
@@ -757,19 +1035,23 @@ export default function HomePage() {
           {filteredUnassignedBoxes.length > 0 ? (
              viewMode === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredUnassignedBoxes.map(box => (
-                    <BoxCard
-                    key={box.id}
-                    box={box}
-                    onAddItem={handleAddItemToBox}
-                    onUpdateItem={handleUpdateItemInBox}
-                    onDeleteItem={handleDeleteItemFromBox}
-                    onDeleteBox={handleDeleteBox}
-                    onUpdateBoxName={handleUpdateBoxName}
-                    onUnassignBox={handleUnassignBox}
-                    totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                    />
-                ))}
+                {filteredUnassignedBoxes.map(box => {
+                     const originalBox = boxes.find(b=>b.id === box.id);
+                    return (
+                        <BoxCard
+                        key={box.id}
+                        box={box}
+                        onAddItem={handleAddItemToBox}
+                        onUpdateItem={handleUpdateItemInBox}
+                        onDeleteItem={handleDeleteItemFromBox}
+                        onDeleteBox={handleDeleteBox}
+                        onUpdateBoxName={handleUpdateBoxName}
+                        onUnassignBox={handleUnassignBox}
+                        totalItemsInBoxOriginal={originalBox?.items.length || 0}
+                        isFilteredView={!!filter}
+                        />
+                    );
+                })}
                 </div>
              ) : (
                  <ListView boxes={filteredUnassignedBoxes} isFilteredView={!!filter} allItemsCount={unassignedBoxes.length} />
@@ -821,7 +1103,7 @@ export default function HomePage() {
                     <ItemCard 
                         key={item.id} 
                         item={item} 
-                        boxId={selectedBalda!.id} // Context is baldaId for loose items on balda
+                        boxId={selectedBalda!.id} 
                         onUpdateItem={(baldaId, itemId, itemData) => handleUpdateLooseItemOnBalda(selectedEstanteria!.id, baldaId, itemId, itemData)}
                         onDeleteItem={(baldaId, itemId) => handleDeleteLooseItemFromBalda(selectedEstanteria!.id, baldaId, itemId)}
                     />
@@ -834,19 +1116,23 @@ export default function HomePage() {
               <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas Asignadas ({(filteredBoxesOnSelectedBalda || []).length})</h3>
               {(filteredBoxesOnSelectedBalda || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(filteredBoxesOnSelectedBalda || []).map(box => (
-                     <BoxCard
-                        key={box.id}
-                        box={box}
-                        onAddItem={handleAddItemToBox}
-                        onUpdateItem={handleUpdateItemInBox}
-                        onDeleteItem={handleDeleteItemFromBox}
-                        onDeleteBox={handleDeleteBox}
-                        onUpdateBoxName={handleUpdateBoxName}
-                        onUnassignBox={handleUnassignBox}
-                        totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                      />
-                  ))}
+                  {(filteredBoxesOnSelectedBalda || []).map(box => {
+                    const originalBox = boxes.find(b=>b.id === box.id);
+                    return (
+                        <BoxCard
+                            key={box.id}
+                            box={box}
+                            onAddItem={handleAddItemToBox}
+                            onUpdateItem={handleUpdateItemInBox}
+                            onDeleteItem={handleDeleteItemFromBox}
+                            onDeleteBox={handleDeleteBox}
+                            onUpdateBoxName={handleUpdateBoxName}
+                            onUnassignBox={handleUnassignBox}
+                            totalItemsInBoxOriginal={originalBox?.items.length || 0}
+                            isFilteredView={!!filter}
+                        />
+                    );
+                  })}
                 </div>
               ) : <p className="text-muted-foreground">{filter ? "No hay cajas asignadas que coincidan con el filtro." : "No hay cajas asignadas a esta balda."}</p>}
             </div>
@@ -905,19 +1191,23 @@ export default function HomePage() {
               <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas en Estantería ({(filteredBoxesOnSelectedEstanteriaDirectly || []).length})</h3>
               {(filteredBoxesOnSelectedEstanteriaDirectly || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(filteredBoxesOnSelectedEstanteriaDirectly || []).map(box => (
-                     <BoxCard
-                        key={box.id}
-                        box={box}
-                        onAddItem={handleAddItemToBox}
-                        onUpdateItem={handleUpdateItemInBox}
-                        onDeleteItem={handleDeleteItemFromBox}
-                        onDeleteBox={handleDeleteBox}
-                        onUpdateBoxName={handleUpdateBoxName}
-                        onUnassignBox={handleUnassignBox}
-                        totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                      />
-                  ))}
+                  {(filteredBoxesOnSelectedEstanteriaDirectly || []).map(box => {
+                     const originalBox = boxes.find(b=>b.id === box.id);
+                    return (
+                        <BoxCard
+                            key={box.id}
+                            box={box}
+                            onAddItem={handleAddItemToBox}
+                            onUpdateItem={handleUpdateItemInBox}
+                            onDeleteItem={handleDeleteItemFromBox}
+                            onDeleteBox={handleDeleteBox}
+                            onUpdateBoxName={handleUpdateBoxName}
+                            onUnassignBox={handleUnassignBox}
+                            totalItemsInBoxOriginal={originalBox?.items.length || 0}
+                            isFilteredView={!!filter}
+                        />
+                    );
+                  })}
                 </div>
               ) : <p className="text-muted-foreground">{filter ? "No hay cajas que coincidan." : "No hay cajas directamente en esta estantería."}</p>}
             </div>
@@ -1040,12 +1330,12 @@ export default function HomePage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow space-y-3 pt-3 text-sm">
-                      {/* Objetos Sueltos Directos en Estantería */}
+                     
                       {estLooseItems.length > 0 && (
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Package className="mr-2 h-4 w-4" />Objetos Sueltos Directos:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {estLooseItems.map(item => (
+                            {estLooseItems.slice(0, filter ? undefined : 3).map(item => (
                               <li key={item.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
                                   {item.name}
@@ -1053,66 +1343,72 @@ export default function HomePage() {
                                 {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
                               </li>
                             ))}
+                             {!filter && estLooseItems.length > 3 && <li className="text-muted-foreground italic">...y {estLooseItems.length - 3} más</li>}
                           </ul>
                         </div>
                       )}
 
-                      {/* Cajas Directas en Estantería */}
                       {directBoxes.length > 0 && (
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Archive className="mr-2 h-4 w-4" />Cajas Directas:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {directBoxes.map(box => (
+                            {directBoxes.slice(0, filter ? undefined : 3).map(box => (
                               <li key={box.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
                                   {box.name}
                                 </Button>
                               </li>
                             ))}
+                            {!filter && directBoxes.length > 3 && <li className="text-muted-foreground italic">...y {directBoxes.length - 3} más</li>}
                           </ul>
                         </div>
                       )}
                       
-                      {/* Baldas */}
                       {estBaldas.length > 0 && (
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Layers className="mr-2 h-4 w-4" />Baldas:</h4>
                           <div className="space-y-2 pl-2">
-                            {estBaldas.map(balda => {
-                              const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id);
+                            {estBaldas.slice(0, filter ? undefined : 2).map(balda => {
+                              const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id && b.location?.estanteriaId === est.id);
                               const baldaLooseItems = (balda.looseItems || []);
                               return (
                                 <div key={balda.id} className="p-2 border rounded-md bg-card/50">
                                   <Button variant="link" className="p-0 h-auto font-medium text-sm" onClick={() => setSidebarSelection({ type: 'balda', id: balda.id, estanteriaId: est.id, name: balda.name })}>
                                     <Layers className="mr-1 h-3.5 w-3.5"/>{balda.name}
                                   </Button>
-                                  {baldaLooseItems.length > 0 && (
-                                    <ul className="list-disc list-inside pl-6 text-xs">
-                                      {baldaLooseItems.map(item => (
-                                        <li key={item.id} className="truncate">
-                                          <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
-                                          {item.name}
-                                          {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                  {boxesOnBalda.length > 0 && (
-                                    <ul className="list-disc list-inside pl-6 text-xs">
-                                      {boxesOnBalda.map(box => (
-                                         <li key={box.id} className="truncate">
-                                            <Archive className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
-                                            <Button variant="link" size="sm" className="p-0 h-auto text-xs inline" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
-                                                {box.name}
-                                            </Button>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                  {(baldaLooseItems.length === 0 && boxesOnBalda.length === 0) && <p className="pl-6 text-xs text-muted-foreground italic">(Balda vacía)</p>}
+                                  {(baldaLooseItems.length > 0 || boxesOnBalda.length > 0) ? (
+                                    <>
+                                      {baldaLooseItems.length > 0 && (
+                                        <ul className="list-disc list-inside pl-6 text-xs">
+                                          {baldaLooseItems.slice(0, filter ? undefined : 2).map(item => (
+                                            <li key={item.id} className="truncate">
+                                              <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
+                                              {item.name}
+                                              {item.borrowedTo && <span className="text-accent/80"> (Prestado)</span>}
+                                            </li>
+                                          ))}
+                                          {!filter && baldaLooseItems.length > 2 && <li className="text-muted-foreground italic">...y {baldaLooseItems.length - 2} objeto(s) más</li>}
+                                        </ul>
+                                      )}
+                                      {boxesOnBalda.length > 0 && (
+                                        <ul className="list-disc list-inside pl-6 text-xs">
+                                          {boxesOnBalda.slice(0, filter ? undefined : 2).map(box => (
+                                            <li key={box.id} className="truncate">
+                                                <Archive className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
+                                                <Button variant="link" size="sm" className="p-0 h-auto text-xs inline" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
+                                                    {box.name}
+                                                </Button>
+                                            </li>
+                                          ))}
+                                          {!filter && boxesOnBalda.length > 2 && <li className="text-muted-foreground italic">...y {boxesOnBalda.length - 2} caja(s) más</li>}
+                                        </ul>
+                                      )}
+                                    </>
+                                  ) : ( <p className="pl-6 text-xs text-muted-foreground italic">(Balda vacía)</p> )}
                                 </div>
                               );
                             })}
+                            {!filter && estBaldas.length > 2 && <div className="p-2 text-muted-foreground italic text-xs">...y {estBaldas.length - 2} balda(s) más</div>}
                           </div>
                         </div>
                       )}
@@ -1133,7 +1429,7 @@ export default function HomePage() {
             <div className="text-center py-12">
               <Library className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
               <h2 className="text-2xl font-semibold text-muted-foreground mb-2">No hay estanterías</h2>
-              <p className="text-muted-foreground">Crea tu primera estantería para organizar tus objetos.</p>
+              <p className="text-muted-foreground">{filter ? "Ninguna estantería coincide con tu filtro." : "Crea tu primera estantería para organizar tus objetos."}</p>
               {filter && <Button variant="link" onClick={() => setFilter('')} className="mt-4">Limpiar filtro</Button>}
             </div>
           )}
@@ -1144,19 +1440,23 @@ export default function HomePage() {
           {filteredUnassignedBoxes.length > 0 ? (
             viewMode === 'card' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredUnassignedBoxes.map(box => (
-                    <BoxCard
-                    key={box.id}
-                    box={box}
-                    onAddItem={handleAddItemToBox}
-                    onUpdateItem={handleUpdateItemInBox}
-                    onDeleteItem={handleDeleteItemFromBox}
-                    onDeleteBox={handleDeleteBox}
-                    onUpdateBoxName={handleUpdateBoxName}
-                    onUnassignBox={handleUnassignBox}
-                    totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                    />
-                ))}
+                {filteredUnassignedBoxes.map(box => {
+                    const originalBox = boxes.find(b=>b.id === box.id);
+                    return (
+                        <BoxCard
+                        key={box.id}
+                        box={box}
+                        onAddItem={handleAddItemToBox}
+                        onUpdateItem={handleUpdateItemInBox}
+                        onDeleteItem={handleDeleteItemFromBox}
+                        onDeleteBox={handleDeleteBox}
+                        onUpdateBoxName={handleUpdateBoxName}
+                        onUnassignBox={handleUnassignBox}
+                        totalItemsInBoxOriginal={originalBox?.items.length || 0}
+                        isFilteredView={!!filter}
+                        />
+                    );
+                })}
                 </div>
             ) : (
                 <ListView boxes={filteredUnassignedBoxes} isFilteredView={!!filter} allItemsCount={unassignedBoxes.length} />
@@ -1190,7 +1490,12 @@ export default function HomePage() {
   return (
     <SidebarProvider>
       <div className="flex flex-col min-h-screen">
-        <Header />
+        <Header 
+          currentUser={currentUser} 
+          loadingAuth={loadingAuth}
+          handleSignIn={handleSignIn}
+          handleSignOut={handleSignOut}
+        />
         <div className="flex flex-1">
           <Sidebar side="left" collapsible="icon" className="border-r">
             <SidebarHeader className="p-2 flex justify-between items-center">
@@ -1211,34 +1516,38 @@ export default function HomePage() {
                   <SidebarTrigger className="md:hidden" />
                   <h1 className="text-3xl font-bold text-foreground">{pageTitle}</h1>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
-                 {sidebarSelection.type === 'all-boxes' && (
-                     <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
-                        {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
-                        {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
+                 {currentUser && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {(sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes') && (
+                        <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
+                            {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
+                            {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={handleExportPDF}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Exportar Inventario
                     </Button>
+                    {sidebarSelection.type === 'all-estanterias' && <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />}
+                    { (sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || sidebarSelection.type === 'all-estanterias') && <CreateBoxDialog onCreateBox={handleCreateBox} />}
+                  </div>
                  )}
-                  <Button variant="outline" onClick={handleExportPDF}>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Exportar Inventario
-                  </Button>
-                  {sidebarSelection.type === 'all-estanterias' && <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />}
-                  { (sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || sidebarSelection.type === 'all-estanterias') && <CreateBoxDialog onCreateBox={handleCreateBox} />}
-                </div>
               </div>
 
-              <div className="mb-8">
-                <div className="relative">
-                  <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder={currentFilterPlaceholder}
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="pl-10 w-full text-base"
-                  />
+              {currentUser && (
+                <div className="mb-8">
+                  <div className="relative">
+                    <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder={currentFilterPlaceholder}
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                      className="pl-10 w-full text-base"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
               
               {renderContent()}
 
