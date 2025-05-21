@@ -16,8 +16,8 @@ const firebaseConfig = {
 if (!firebaseConfig.apiKey) {
   console.error("Firebase API Key is UNDEFINED. Make sure NEXT_PUBLIC_FIREBASE_API_KEY is set in your .env.local file and the server is restarted.");
 } else {
-  // Optional: You could log a part of the key (e.g., first few chars) to confirm it's loaded, but be careful not to log the full key.
-  // console.log("Firebase API Key starts with:", firebaseConfig.apiKey.substring(0, 5));
+  // Log a part of the key to confirm it's loaded, but be careful not to log the full key.
+  console.log("Firebase API Key is LOADED and starts with:", firebaseConfig.apiKey.substring(0, 5));
 }
 
 let app: FirebaseApp;
@@ -35,3 +35,4 @@ db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 export { app, auth, db, googleProvider };
+
