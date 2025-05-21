@@ -10,7 +10,7 @@ import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3 } from "lucide-react";
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -69,7 +69,7 @@ export default function HomePage() {
 
     setEstanterias(prev => 
       prev.map(e => 
-        e.id === estanteriaId ? { ...e, name: newName } : e
+        e.id === estanteriaId ? { ...e, name: newName, looseItems: e.looseItems || [], baldas: e.baldas || [] } : e
       ).sort((a,b) => a.name.localeCompare(b.name))
     );
     setBoxes(prevBoxes => 
@@ -175,7 +175,7 @@ export default function HomePage() {
     setEstanterias(prev => 
         prev.map(est => 
             est.id === estanteriaId 
-            ? { ...est, baldas: (est.baldas || []).map(b => b.id === baldaId ? { ...b, name: newName } : b).sort((a,b) => a.name.localeCompare(b.name)) } 
+            ? { ...est, baldas: (est.baldas || []).map(b => b.id === baldaId ? { ...b, name: newName, looseItems: b.looseItems || [] } : b).sort((a,b) => a.name.localeCompare(b.name)) } 
             : est
         )
     );
@@ -450,13 +450,13 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return sortedEstanterias.filter(e => 
       e.name.toLowerCase().includes(lowerFilter) ||
-      (e.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
+      (e.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter)) ||
       (e.baldas || []).some(b => 
         b.name.toLowerCase().includes(lowerFilter) || 
-        (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
-        sortedBoxes.some(box => box.location?.baldaId === b.id && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))))
+        (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter)) ||
+        sortedBoxes.some(box => box.location?.baldaId === b.id && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))))
       ) ||
-      sortedBoxes.some(box => box.location?.estanteriaId === e.id && !box.location?.baldaId && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))))
+      sortedBoxes.some(box => box.location?.estanteriaId === e.id && !box.location?.baldaId && (box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))))
     );
   }, [sortedEstanterias, filter, sortedBoxes]);
 
@@ -465,7 +465,7 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return unassignedBoxes.filter(box => 
       box.name.toLowerCase().includes(lowerFilter) ||
-      box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))
+      box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))
     );
   }, [unassignedBoxes, filter]);
   
@@ -476,8 +476,8 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return baldas.filter(b => 
       b.name.toLowerCase().includes(lowerFilter) ||
-      (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)) ||
-      boxesOnSelectedBalda.filter(box => box.location?.baldaId === b.id).some(box => box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter)))
+      (b.looseItems || []).some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter)) ||
+      boxesOnSelectedBalda.filter(box => box.location?.baldaId === b.id).some(box => box.name.toLowerCase().includes(lowerFilter) || box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter)))
     );
   }, [selectedEstanteria, filter, boxesOnSelectedBalda]);
 
@@ -486,7 +486,7 @@ export default function HomePage() {
     const items = (selectedBalda.looseItems || []).sort((a,b) => a.name.localeCompare(b.name));
     if (!filter) return items;
     const lowerFilter = filter.toLowerCase();
-    return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter));
+    return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter));
   }, [selectedBalda, filter]);
 
   const filteredBoxesOnSelectedBalda = useMemo(() => {
@@ -495,7 +495,7 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return items.filter(box => 
         box.name.toLowerCase().includes(lowerFilter) ||
-        box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))
+        box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))
     );
   }, [boxesOnSelectedBalda, filter]);
 
@@ -504,7 +504,7 @@ export default function HomePage() {
     const items = (selectedEstanteria.looseItems || []).sort((a,b) => a.name.localeCompare(b.name));
     if (!filter) return items;
     const lowerFilter = filter.toLowerCase();
-    return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter));
+    return items.filter(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter));
   },[selectedEstanteria, filter]);
 
   const filteredBoxesOnSelectedEstanteriaDirectly = useMemo(() => {
@@ -513,7 +513,7 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return items.filter(box => 
         box.name.toLowerCase().includes(lowerFilter) ||
-        box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))
+        box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))
     );
   }, [boxesOnSelectedEstanteriaDirectly, filter]);
 
@@ -523,7 +523,7 @@ export default function HomePage() {
     const lowerFilter = filter.toLowerCase();
     return sortedBoxes.filter(box => 
       box.name.toLowerCase().includes(lowerFilter) ||
-      box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || item.description?.toLowerCase().includes(lowerFilter))
+      box.items.some(item => item.name.toLowerCase().includes(lowerFilter) || (item.description || "").toLowerCase().includes(lowerFilter))
     );
   }, [sortedBoxes, filter]);
 
@@ -586,7 +586,7 @@ export default function HomePage() {
         }
 
         // Baldas
-        const estBaldas = est.baldas || [];
+        const estBaldas = (est.baldas || []).sort((a,b) => a.name.localeCompare(b.name));
         if (estBaldas.length > 0) {
           doc.setFont(undefined, 'bold');
           doc.text("  Baldas:", 20, yPosition); yPosition += 5;
@@ -599,7 +599,7 @@ export default function HomePage() {
             yPosition += 6;
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
-            const baldaLooseItems = balda.looseItems || [];
+            const baldaLooseItems = (balda.looseItems || []).sort((a,b)=> a.name.localeCompare(b.name));
             if (baldaLooseItems.length > 0) {
               doc.text("      Objetos Sueltos (en Balda):", 30, yPosition); yPosition += 5;
               baldaLooseItems.forEach(item => {
@@ -608,7 +608,7 @@ export default function HomePage() {
                 yPosition += 5;
               });
             }
-            const boxesOnThisBalda = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && box.location?.baldaId === balda.id);
+            const boxesOnThisBalda = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && box.location?.baldaId === balda.id).sort((a,b)=> a.name.localeCompare(b.name));
             if (boxesOnThisBalda.length > 0) {
               doc.text("      Cajas (en Balda):", 30, yPosition); yPosition += 5;
               boxesOnThisBalda.forEach(box => {
@@ -815,9 +815,9 @@ export default function HomePage() {
           <CardContent className="space-y-6">
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos ({(filteredLooseItemsOnSelectedBalda || []).length})</h3>
-              {filteredLooseItemsOnSelectedBalda.length > 0 ? (
+              {(filteredLooseItemsOnSelectedBalda || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredLooseItemsOnSelectedBalda.map(item => (
+                  {(filteredLooseItemsOnSelectedBalda || []).map(item => (
                     <ItemCard 
                         key={item.id} 
                         item={item} 
@@ -832,9 +832,9 @@ export default function HomePage() {
             <hr/>
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas Asignadas ({(filteredBoxesOnSelectedBalda || []).length})</h3>
-              {filteredBoxesOnSelectedBalda.length > 0 ? (
+              {(filteredBoxesOnSelectedBalda || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredBoxesOnSelectedBalda.map(box => (
+                  {(filteredBoxesOnSelectedBalda || []).map(box => (
                      <BoxCard
                         key={box.id}
                         box={box}
@@ -880,15 +880,15 @@ export default function HomePage() {
               </div>
             </CardTitle>
             <CardDescription>
-                {(selectedEstanteria.looseItems || []).length} objeto(s) suelto(s) directo(s), {boxesOnSelectedEstanteriaDirectly.length} caja(s) directa(s), {(selectedEstanteria.baldas || []).length} balda(s).
+                {(selectedEstanteria.looseItems || []).length} objeto(s) suelto(s) directo(s), {(boxesOnSelectedEstanteriaDirectly || []).length} caja(s) directa(s), {(selectedEstanteria.baldas || []).length} balda(s).
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><Package className="mr-2 h-5 w-5 text-primary"/>Objetos Sueltos en Estantería ({(filteredLooseItemsOnSelectedEstanteria || []).length})</h3>
-              {filteredLooseItemsOnSelectedEstanteria.length > 0 ? (
+              {(filteredLooseItemsOnSelectedEstanteria || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredLooseItemsOnSelectedEstanteria.map(item => (
+                  {(filteredLooseItemsOnSelectedEstanteria || []).map(item => (
                     <ItemCard 
                         key={item.id} 
                         item={item} 
@@ -903,9 +903,9 @@ export default function HomePage() {
             <hr/>
             <div>
               <h3 className="text-xl font-semibold mb-3 flex items-center"><ArchiveRestore className="mr-2 h-5 w-5 text-primary"/>Cajas en Estantería ({(filteredBoxesOnSelectedEstanteriaDirectly || []).length})</h3>
-              {filteredBoxesOnSelectedEstanteriaDirectly.length > 0 ? (
+              {(filteredBoxesOnSelectedEstanteriaDirectly || []).length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredBoxesOnSelectedEstanteriaDirectly.map(box => (
+                  {(filteredBoxesOnSelectedEstanteriaDirectly || []).map(box => (
                      <BoxCard
                         key={box.id}
                         box={box}
@@ -924,9 +924,9 @@ export default function HomePage() {
             <hr/>
             <div>
                 <h3 className="text-xl font-semibold mb-3 flex items-center"><Layers className="mr-2 h-5 w-5 text-primary"/>Baldas ({(filteredBaldasInSelectedEstanteria || []).length})</h3>
-                {filteredBaldasInSelectedEstanteria.length > 0 ? (
+                {(filteredBaldasInSelectedEstanteria || []).length > 0 ? (
                 <div className="space-y-4">
-                    {filteredBaldasInSelectedEstanteria.map(balda => (
+                    {(filteredBaldasInSelectedEstanteria || []).map(balda => (
                     <Card key={balda.id} className="hover:shadow-md transition-shadow">
                         <CardHeader className="py-3 px-4">
                         <div className="flex justify-between items-center">
@@ -983,94 +983,11 @@ export default function HomePage() {
       );
     }
 
-    // Default View: List of Estanterias and Unassigned Boxes
+    // Default View (all-estanterias) - Simplified for diagnosing parsing error
     return (
-      <div className="space-y-8">
-        <section>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold flex items-center"><Library className="mr-3 h-7 w-7 text-primary"/>Mis Estanterías ({filteredEstanterias.length})</h2>
-            <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />
-          </div>
-          {filteredEstanterias.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEstanterias.map(est => (
-                <Card key={est.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Button variant="link" className="p-0 h-auto text-xl" onClick={() => setSidebarSelection({type: 'estanteria', id: est.id, name: est.name, estanteriaId: est.id })}>
-                                <Server className="mr-2 h-6 w-6 text-primary"/>{est.name}
-                            </Button>
-                            <EditNameDialog
-                                currentName={est.name}
-                                itemTypeForTitle="Estantería"
-                                onSave={(newName) => handleUpdateEstanteriaName(est.id, newName)}
-                            />
-                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="destructive" size="icon">
-                            <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar Estantería?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esto eliminará permanentemente la estantería "{est.name}", todos sus objetos sueltos, todas sus baldas y los objetos sueltos en ellas. Las cajas (tanto directas como en baldas) serán desasignadas (pasarán a "sin ubicar").
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteEstanteria(est.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                              Eliminar Estantería
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                    <CardDescription className="pt-1">{(est.looseItems || []).length} obj. suelto(s), {boxes.filter(b => b.location?.estanteriaId === est.id && !b.location?.baldaId).length} caja(s) directa(s), {(est.baldas || []).length} balda(s)</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                     <Button size="sm" variant="outline" onClick={() => setSidebarSelection({type: 'estanteria', id: est.id, name: est.name, estanteriaId: est.id })}>
-                        <CornerRightDown className="mr-2 h-4 w-4"/> Ver Contenido
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">{filter ? "No hay estanterías que coincidan con el filtro." : "Aún no has creado ninguna estantería."}</p>
-          )}
-        </section>
-
-        <hr />
-
-        <section>
-           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold flex items-center"><Package className="mr-3 h-7 w-7 text-primary"/>Cajas sin Ubicar ({filteredUnassignedBoxes.length})</h2>
-            <CreateBoxDialog onCreateBox={handleCreateBox}/>
-          </div>
-          {filteredUnassignedBoxes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredUnassignedBoxes.map(box => (
-                <BoxCard
-                  key={box.id}
-                  box={box}
-                  onAddItem={handleAddItemToBox}
-                  onUpdateItem={handleUpdateItemInBox}
-                  onDeleteItem={handleDeleteItemFromBox}
-                  onDeleteBox={handleDeleteBox}
-                  onUpdateBoxName={handleUpdateBoxName}
-                  onUnassignBox={handleUnassignBox}
-                  totalItemsInBoxOriginal={boxes.find(b=>b.id === box.id)?.items.length || 0}
-                />
-              ))}
-            </div>
-          ) : (
-             <p className="text-muted-foreground">{filter ? "No hay cajas sin ubicar que coincidan con el filtro." : "Todas tus cajas están ubicadas o no tienes cajas."}</p>
-          )}
-        </section>
+      <div>
+        <p>Test: Vista de Todas las Estanterías</p>
+        <p>Si ves esto, el error de parsing está en el JSX complejo que fue eliminado temporalmente de esta sección.</p>
       </div>
     );
   };
@@ -1153,4 +1070,3 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
-
