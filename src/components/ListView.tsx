@@ -18,8 +18,7 @@ export function ListView({ boxes, isFilteredView, allItemsCount, selectedBoxName
   let headerDescription = "";
   if (isFilteredView) {
     if (selectedBoxName) {
-      const originalBox = boxes.find(b => b.name === selectedBoxName); // This might be tricky if boxes array is already filtered
-      // For simplicity, we'll focus on displayed items vs potential total if we had original box data here.
+      const originalBox = boxes.find(b => b.name === selectedBoxName); 
       headerDescription = `Mostrando ${displayedItemsCount} objeto(s) filtrado(s) en "${selectedBoxName}".`;
     } else {
       headerDescription = `Mostrando ${displayedItemsCount} de ${allItemsCount} objeto(s) filtrado(s) en todas las cajas.`;
@@ -40,7 +39,7 @@ export function ListView({ boxes, isFilteredView, allItemsCount, selectedBoxName
           {headerDescription}
         </CardDescription>
       )}
-      <ScrollArea className="h-[calc(100vh-360px)] pr-4"> {/* Adjusted height considering potential description */}
+      <ScrollArea className="h-[calc(100vh-360px)] pr-4"> 
         <div className="space-y-4">
           {boxes.map((box) => (
             <Card key={box.id} className="shadow-sm border border-border/70">

@@ -26,7 +26,7 @@ const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
-const HEADER_HEIGHT = "3.5rem"; // Equivalent to h-14
+const HEADER_HEIGHT = "3.5rem"; 
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
@@ -215,28 +215,26 @@ const Sidebar = React.forwardRef<
         data-variant={variant}
         data-side={side}
       >
-        {/* Spacer div for fixed sidebar */}
          <div
           className={cn(
             "duration-200 relative bg-transparent transition-[width] ease-linear",
-            "h-[calc(100vh-var(--header-height))]", // Adjusted height
+            "h-[calc(100vh-var(--header-height))]", 
             "group-data-[collapsible=offcanvas]:w-0",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
-            state === "expanded" ? "w-[--sidebar-width]" : "" // Ensure spacer has width when expanded
+            state === "expanded" ? "w-[--sidebar-width]" : "" 
           )}
            style={{ '--header-height': HEADER_HEIGHT } as React.CSSProperties}
         />
-        {/* Fixed sidebar content */}
         <div
           className={cn(
             "duration-200 fixed z-10 hidden transition-[left,right,width] ease-linear md:flex",
-            "top-[var(--header-height)] h-[calc(100vh-var(--header-height))]", // Adjusted top and height
+            "top-[var(--header-height)] h-[calc(100vh-var(--header-height))]", 
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-            state === "expanded" ? "w-[--sidebar-width]" : "", // Width when expanded
+            state === "expanded" ? "w-[--sidebar-width]" : "", 
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
@@ -323,7 +321,7 @@ const SidebarInset = React.forwardRef<
       ref={ref}
       className={cn(
         "relative flex flex-1 flex-col bg-background",
-        "min-h-[calc(100vh-var(--header-height))]", // Adjusted min-height to account for header
+        "min-h-[calc(100vh-var(--header-height))]", 
         "peer-data-[variant=inset]:min-h-[calc(100vh-var(--header-height)-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}

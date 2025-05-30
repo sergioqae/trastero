@@ -41,8 +41,8 @@ type AssignBoxFormValues = z.infer<typeof formSchema>;
 
 interface AssignBoxDialogProps {
   estanteriaId: string;
-  baldaId?: string | null; // Made optional for assigning directly to estanteria
-  boxes: Box[]; // List of assignable boxes (e.g., unassigned ones)
+  baldaId?: string | null; 
+  boxes: Box[]; 
   onAssignBox: (boxId: string, estanteriaId: string, baldaId?: string | null) => void;
   triggerText?: string;
 }
@@ -54,7 +54,7 @@ export function AssignBoxDialog({ estanteriaId, baldaId, boxes, onAssignBox, tri
   });
 
   const onSubmit = (data: AssignBoxFormValues) => {
-    onAssignBox(data.boxId, estanteriaId, baldaId); // Pass baldaId (could be null)
+    onAssignBox(data.boxId, estanteriaId, baldaId); 
     form.reset();
     setOpen(false);
   };

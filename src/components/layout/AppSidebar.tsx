@@ -13,13 +13,13 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { Home, Package, Library, Layers, Archive, ArchiveRestore, Server } from "lucide-react";
-import * as Accordion from "@radix-ui/react-accordion"; // For expandable estanterias
+import * as Accordion from "@radix-ui/react-accordion"; 
 
 export interface SidebarSelection {
   type: 'all-estanterias' | 'estanteria' | 'balda' | 'all-boxes' | 'unassigned-boxes' | 'box';
-  id?: string; // estanteriaId, baldaId, or boxId depending on type
-  estanteriaId?: string; // Relevant for balda
-  name?: string; // For display in title, etc.
+  id?: string; 
+  estanteriaId?: string; 
+  name?: string; 
 }
 
 interface AppSidebarProps {
@@ -67,7 +67,6 @@ export function AppSidebar({ boxes, estanterias, currentSelection, onSelect }: A
                           <Server /> 
                           <span>{est.name}</span>
                         </div>
-                        {/* Chevron will be added by Accordion.Trigger if needed, or style one */}
                       </SidebarMenuButton>
                     </Accordion.Trigger>
                   </SidebarMenuItem>
@@ -98,7 +97,6 @@ export function AppSidebar({ boxes, estanterias, currentSelection, onSelect }: A
                 <span className="px-3 text-xs text-sidebar-foreground/60 italic group-data-[collapsible=icon]:hidden">No hay estanterías</span>
             </SidebarMenuItem>
         )}
-         {/* For icon-only mode, list estanterias without accordion */}
         <div className="hidden group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-1">
             {estanterias.map((est) => (
                 <SidebarMenuItem key={`icon-${est.id}`}>
@@ -142,20 +140,6 @@ export function AppSidebar({ boxes, estanterias, currentSelection, onSelect }: A
           </SidebarMenuButton>
         </SidebarMenuItem>
         
-         {/* Optional: List individual boxes if needed, might be too much with many boxes
-        {boxes.map((box) => (
-          <SidebarMenuItem key={box.id}>
-            <SidebarMenuButton
-              onClick={() => onSelect({ type: 'box', id: box.id, name: box.name })}
-              isActive={currentSelection.type === 'box' && currentSelection.id === box.id}
-              tooltip={`Ver contenido de ${box.name}`}
-            >
-              <Archive /> 
-              <span>{box.name}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-        */}
       </SidebarMenu>
     </SidebarContent>
   );

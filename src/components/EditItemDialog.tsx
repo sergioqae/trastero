@@ -53,11 +53,13 @@ export function EditItemDialog({ item, boxId: contextId, onUpdateItem }: EditIte
   });
 
   useEffect(() => {
-    form.reset({
-      name: item.name,
-      description: item.description,
-      borrowedTo: item.borrowedTo || "",
-    });
+    if (open) {
+      form.reset({
+        name: item.name,
+        description: item.description,
+        borrowedTo: item.borrowedTo || "",
+      });
+    }
   }, [item, form, open]);
 
 
