@@ -1,18 +1,18 @@
 
 "use client";
-import { Package2, LogIn, LogOut, UserCircle } from 'lucide-react';
+import { Package2 } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from "@/components/ui/button";
-import type { User } from "firebase/auth";
+// import { Button } from "@/components/ui/button";
+// import type { User } from "firebase/auth"; // Firebase User type no longer needed
 
-interface HeaderProps {
-  currentUser: User | null;
-  loadingAuth: boolean;
-  handleSignIn: () => void;
-  handleSignOut: () => void;
-}
+// interface HeaderProps { // Props related to Firebase auth no longer needed
+//   currentUser: User | null;
+//   loadingAuth: boolean;
+//   handleSignIn: () => void;
+//   handleSignOut: () => void;
+// }
 
-export function Header({ currentUser, loadingAuth, handleSignIn, handleSignOut }: HeaderProps) {
+export function Header(/*{ currentUser, loadingAuth, handleSignIn, handleSignOut }: HeaderProps*/) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
@@ -22,7 +22,8 @@ export function Header({ currentUser, loadingAuth, handleSignIn, handleSignOut }
             Gestor de Trasteros
           </span>
         </Link>
-        <div className="flex items-center space-x-2">
+        {/* Firebase Auth related UI removed */}
+        {/* <div className="flex items-center space-x-2">
           {loadingAuth ? (
             <Button variant="outline" size="sm" disabled>Cargando...</Button>
           ) : currentUser ? (
@@ -42,7 +43,7 @@ export function Header({ currentUser, loadingAuth, handleSignIn, handleSignOut }
               Iniciar Sesión con Google
             </Button>
           )}
-        </div>
+        </div> */}
       </div>
     </header>
   );

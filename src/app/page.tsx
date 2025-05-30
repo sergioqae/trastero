@@ -3,14 +3,14 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import type { Box, Item, Estanteria, Balda } from "@/lib/types";
-// import useLocalStorage from "@/hooks/useLocalStorage"; // Replaced by Firebase
+import useLocalStorage from "@/hooks/useLocalStorage"; // Re-enabled localStorage
 import { Header } from "@/components/layout/Header";
 import { CreateBoxDialog } from "@/components/CreateBoxDialog";
 import { BoxCard } from "@/components/BoxCard";
 import { ListView } from "@/components/ListView";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home, Loader2, AlertTriangle, LogIn } from "lucide-react"; // Added LogIn
+import { PackageSearch, List, LayoutGrid, FileDown, Library, Layers, PlusCircle, ArchiveRestore, Rows3, PackagePlus, IterationCcw, CornerRightDown, Package, Trash2, Server, Edit3, Archive, Home, Loader2, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from 'jspdf';
 import {
@@ -42,19 +42,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { auth, db, signInWithGoogle, signOutUser } from "@/lib/firebase";
-import type { User } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, writeBatch, query, orderBy, where } from "firebase/firestore";
+// Firebase related imports removed
+// import { auth, db, signInWithGoogle, signOutUser } from "@/lib/firebase";
+// import type { User } from "firebase/auth";
+// import { onAuthStateChanged } from "firebase/auth";
+// import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, writeBatch, query, orderBy, where } from "firebase/firestore";
 
 
 export default function HomePage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [loadingData, setLoadingData] = useState(false);
+  // Firebase states removed
+  // const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // const [loadingAuth, setLoadingAuth] = useState(true);
+  // const [loadingData, setLoadingData] = useState(false);
 
-  const [boxes, setBoxes] = useState<Box[]>([]);
-  const [estanterias, setEstanterias] = useState<Estanteria[]>([]);
+  const [boxes, setBoxes] = useLocalStorage<Box[]>("trastero_boxes", []);
+  const [estanterias, setEstanterias] = useLocalStorage<Estanteria[]>("trastero_estanterias", []);
   
   const [filter, setFilter] = useState("");
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -67,503 +69,275 @@ export default function HomePage() {
     setCurrentYear(new Date().getFullYear().toString());
   }, []);
 
-  // Firebase Auth Listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoadingAuth(false);
-      if (!user) {
-        setEstanterias([]);
-        setBoxes([]);
-        setSidebarSelection({ type: 'all-estanterias' }); // Reset view
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  // Firebase Auth Listener removed
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(auth, (user) => {
+  //     setCurrentUser(user);
+  //     setLoadingAuth(false);
+  //     if (!user) {
+  //       setEstanterias([]);
+  //       setBoxes([]);
+  //       setSidebarSelection({ type: 'all-estanterias' }); 
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
 
-  // Fetch data from Firestore when user logs in
-  const fetchData = useCallback(async () => {
-    if (!currentUser) return;
-    setLoadingData(true);
-    try {
-      const estanteriasCol = collection(db, `users/${currentUser.uid}/estanterias`);
-      const estanteriasQuery = query(estanteriasCol, orderBy("name"));
-      const estanteriasSnapshot = await getDocs(estanteriasQuery);
-      const estanteriasList = estanteriasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Estanteria));
-      setEstanterias(estanteriasList);
+  // Fetch data from Firestore removed
+  // const fetchData = useCallback(async () => { ... }, [currentUser, toast]);
+  // useEffect(() => {
+  //   if (currentUser) {
+  //     fetchData();
+  //   }
+  // }, [currentUser, fetchData]);
 
-      const boxesCol = collection(db, `users/${currentUser.uid}/boxes`);
-      const boxesQuery = query(boxesCol, orderBy("name"));
-      const boxesSnapshot = await getDocs(boxesQuery);
-      const boxesList = boxesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Box));
-      setBoxes(boxesList);
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
-    }
-    setLoadingData(false);
-  }, [currentUser, toast]);
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser, fetchData]);
+  // Firebase sign-in/out handlers removed
+  // const handleSignIn = async () => { ... };
+  // const handleSignOut = async () => { ... };
 
 
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      toast({ title: "Inicio de Sesión Exitoso", description: "¡Bienvenido/a de nuevo!" });
-    } catch (error) {
-      toast({ title: "Error de Inicio de Sesión", description: "No se pudo iniciar sesión con Google.", variant: "destructive" });
-    }
+  // --- ESTANTERIA Management (localStorage) ---
+  const handleCreateEstanteria = (estanteriaData: Omit<Estanteria, "id" | "baldas" | "looseItems">) => {
+    const newEstanteria: Estanteria = { ...estanteriaData, id: crypto.randomUUID(), baldas: [], looseItems: [] };
+    setEstanterias(prev => [...prev, newEstanteria].sort((a,b) => a.name.localeCompare(b.name)));
+    toast({ title: "Estantería Creada", description: `La estantería "${newEstanteria.name}" ha sido creada.` });
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOutUser();
-      toast({ title: "Sesión Cerrada", description: "Has cerrado sesión correctamente." });
-    } catch (error) {
-      toast({ title: "Error al Cerrar Sesión", description: "No se pudo cerrar la sesión.", variant: "destructive" });
-    }
-  };
-
-
-  // --- ESTANTERIA Management ---
-  const handleCreateEstanteria = async (estanteriaData: Omit<Estanteria, "id" | "baldas" | "looseItems">) => {
-    if (!currentUser) return;
-    const newEstanteria: Omit<Estanteria, "id"> = { ...estanteriaData, baldas: [], looseItems: [] };
-    try {
-      const docRef = await addDoc(collection(db, `users/${currentUser.uid}/estanterias`), newEstanteria);
-      setEstanterias(prev => [...prev, { ...newEstanteria, id: docRef.id }].sort((a,b) => a.name.localeCompare(b.name)));
-      toast({ title: "Estantería Creada", description: `La estantería "${newEstanteria.name}" ha sido creada.` });
-    } catch (error) {
-      console.error("Error creando estantería:", error);
-      toast({ title: "Error", description: "No se pudo crear la estantería.", variant: "destructive" });
-    }
-  };
-
-  const handleUpdateEstanteriaName = async (estanteriaId: string, newName: string) => {
-    if (!currentUser) return;
+  const handleUpdateEstanteriaName = (estanteriaId: string, newName: string) => {
     const oldEstanteria = estanterias.find(e => e.id === estanteriaId);
     if (!oldEstanteria) return;
 
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { name: newName });
+    setEstanterias(prev => 
+      prev.map(e => 
+        e.id === estanteriaId ? { ...e, name: newName, looseItems: e.looseItems || [], baldas: e.baldas || [] } : e
+      ).sort((a,b) => a.name.localeCompare(b.name))
+    );
+    
+    setBoxes(prevBoxes => 
+      prevBoxes.map(b => 
+        b.location?.estanteriaId === estanteriaId 
+          ? { ...b, location: { ...(b.location!), estanteriaName: newName } } 
+          : b
+      )
+    );
 
-      setEstanterias(prev => 
-        prev.map(e => 
-          e.id === estanteriaId ? { ...e, name: newName, looseItems: e.looseItems || [], baldas: e.baldas || [] } : e
-        ).sort((a,b) => a.name.localeCompare(b.name))
-      );
-      
-      // Update estanteriaName in boxes
-      const batch = writeBatch(db);
-      const updatedBoxesState: Box[] = [];
-      let boxesUpdatedInFirestore = false;
-
-      boxes.forEach(b => {
-        if (b.location?.estanteriaId === estanteriaId) {
-          const updatedBox = { ...b, location: { ...(b.location!), estanteriaName: newName } };
-          updatedBoxesState.push(updatedBox);
-          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, b.id);
-          batch.update(boxRef, { "location.estanteriaName": newName });
-          boxesUpdatedInFirestore = true;
-        } else {
-          updatedBoxesState.push(b);
-        }
-      });
-      if (boxesUpdatedInFirestore) await batch.commit();
-      setBoxes(updatedBoxesState);
-
-
-      if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
-        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
-      }
-      toast({ title: "Estantería Actualizada", description: `Nombre cambiado a "${newName}".` });
-    } catch (error) {
-      console.error("Error actualizando nombre de estantería:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el nombre de la estantería.", variant: "destructive" });
+    if (sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaId) {
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     }
+    toast({ title: "Estantería Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteEstanteria = async (estanteriaIdToDelete: string) => {
-    if (!currentUser) return;
+  const handleDeleteEstanteria = (estanteriaIdToDelete: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaIdToDelete);
     if (!estanteria) return;
 
-    try {
-      await deleteDoc(doc(db, `users/${currentUser.uid}/estanterias`, estanteriaIdToDelete));
-      
-      const batch = writeBatch(db);
-      let boxesNeedUpdate = false;
-      const updatedBoxes = boxes.map(box => {
-        if (box.location?.estanteriaId === estanteriaIdToDelete) {
-          boxesNeedUpdate = true;
-          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, box.id);
-          batch.update(boxRef, { location: null });
-          return { ...box, location: null }; 
-        }
-        return box;
-      });
-      if (boxesNeedUpdate) await batch.commit();
-      setBoxes(updatedBoxes);
+    setEstanterias(prev => prev.filter(e => e.id !== estanteriaIdToDelete));
+    setBoxes(prevBoxes =>
+      prevBoxes.map(box =>
+        box.location?.estanteriaId === estanteriaIdToDelete
+          ? { ...box, location: null }
+          : box
+      )
+    );
 
-      setEstanterias(prev => prev.filter(e => e.id !== estanteriaIdToDelete));
-      if ((sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaIdToDelete) ||
-          (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaIdToDelete)) {
-        setSidebarSelection({ type: 'all-estanterias' });
-      }
-      toast({ title: "Estantería Eliminada", description: `La estantería "${estanteria.name}" ha sido eliminada.`, variant: "destructive" });
-    } catch (error) {
-      console.error("Error eliminando estantería:", error);
-      toast({ title: "Error", description: "No se pudo eliminar la estantería.", variant: "destructive" });
+    if ((sidebarSelection.type === 'estanteria' && sidebarSelection.id === estanteriaIdToDelete) ||
+        (sidebarSelection.type === 'balda' && sidebarSelection.estanteriaId === estanteriaIdToDelete)) {
+      setSidebarSelection({ type: 'all-estanterias' });
     }
+    toast({ title: "Estantería Eliminada", description: `La estantería "${estanteria.name}" ha sido eliminada.`, variant: "destructive" });
   };
 
-  // --- LOOSE ITEM Management on Estanteria ---
-  const handleAddLooseItemToEstanteria = async (estanteriaId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
+  // --- LOOSE ITEM Management on Estanteria (localStorage) ---
+  const handleAddLooseItemToEstanteria = (estanteriaId: string, itemData: Omit<Item, "id">) => {
     const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    const updatedLooseItems = [...(estanteria.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name));
-    
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
-      toast({ title: "Objeto Añadido a Estantería", description: `El objeto "${newItem.name}" ha sido añadido.` });
-    } catch (error) {
-      console.error("Error añadiendo objeto suelto a estantería:", error);
-      toast({ title: "Error", description: "No se pudo añadir el objeto a la estantería.", variant: "destructive" });
-    }
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, looseItems: [...(est.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) } 
+        : est
+    ));
+    toast({ title: "Objeto Añadido a Estantería", description: `El objeto "${newItem.name}" ha sido añadido.` });
   };
 
-  const handleUpdateLooseItemOnEstanteria = async (estanteriaId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
-    const updatedLooseItems = (estanteria.looseItems || [])
-      .map(item => item.id === itemId ? { ...item, ...itemData } : item)
-      .sort((a,b)=>a.name.localeCompare(b.name));
-
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
-      toast({ title: "Objeto de Estantería Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-    } catch (error) {
-      console.error("Error actualizando objeto suelto en estantería:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el objeto de la estantería.", variant: "destructive" });
-    }
+  const handleUpdateLooseItemOnEstanteria = (estanteriaId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, looseItems: (est.looseItems || []).map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) } 
+        : est
+    ));
+    toast({ title: "Objeto de Estantería Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
   };
   
-  const handleDeleteLooseItemFromEstanteria = async (estanteriaId: string, itemId: string) => {
-    if (!currentUser) return;
+  const handleDeleteLooseItemFromEstanteria = (estanteriaId: string, itemId: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
-    const itemName = (estanteria.looseItems || []).find(i => i.id === itemId)?.name || "El objeto seleccionado";
-    const updatedLooseItems = (estanteria.looseItems || []).filter(item => item.id !== itemId);
-
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { looseItems: updatedLooseItems });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, looseItems: updatedLooseItems } : est));
-      toast({ title: "Objeto Eliminado de Estantería", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
-    } catch (error)
-     {
-      console.error("Error eliminando objeto suelto de estantería:", error);
-      toast({ title: "Error", description: "No se pudo eliminar el objeto de la estantería.", variant: "destructive" });
-    }
+    const itemName = (estanteria?.looseItems || []).find(i => i.id === itemId)?.name || "El objeto seleccionado";
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, looseItems: (est.looseItems || []).filter(item => item.id !== itemId) } 
+        : est
+    ));
+    toast({ title: "Objeto Eliminado de Estantería", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
   };
 
-  // --- BALDA Management ---
-  const handleCreateBalda = async (estanteriaId: string, baldaData: Omit<Balda, "id" | "looseItems">) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
+  // --- BALDA Management (localStorage) ---
+  const handleCreateBalda = (estanteriaId: string, baldaData: Omit<Balda, "id" | "looseItems">) => {
     const newBalda: Balda = { ...baldaData, id: crypto.randomUUID(), looseItems: [] };
-    const updatedBaldas = [...(estanteria.baldas || []), newBalda].sort((a,b) => a.name.localeCompare(b.name));
-
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
-      toast({ title: "Balda Creada", description: `La balda "${newBalda.name}" ha sido añadida.` });
-    } catch (error) {
-      console.error("Error creando balda:", error);
-      toast({ title: "Error", description: "No se pudo crear la balda.", variant: "destructive" });
-    }
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, baldas: [...(est.baldas || []), newBalda].sort((a,b) => a.name.localeCompare(b.name)) } 
+        : est
+    ));
+    toast({ title: "Balda Creada", description: `La balda "${newBalda.name}" ha sido añadida.` });
   };
 
-  const handleUpdateBaldaName = async (estanteriaId: string, baldaId: string, newName: string) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
+  const handleUpdateBaldaName = (estanteriaId: string, baldaId: string, newName: string) => {
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, baldas: (est.baldas || []).map(b => b.id === baldaId ? { ...b, name: newName, looseItems: b.looseItems || [] } : b).sort((a,b) => a.name.localeCompare(b.name)) } 
+        : est
+    ));
 
-    const updatedBaldas = (estanteria.baldas || [])
-      .map(b => b.id === baldaId ? { ...b, name: newName, looseItems: b.looseItems || [] } : b)
-      .sort((a,b) => a.name.localeCompare(b.name));
+    setBoxes(prevBoxes => 
+      prevBoxes.map(b => 
+        (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId)
+          ? { ...b, location: { ...(b.location!), baldaName: newName } } 
+          : b
+      )
+    );
 
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
-
-      // Update baldaName in boxes
-      const batch = writeBatch(db);
-      const updatedBoxesState: Box[] = [];
-      let boxesUpdatedInFirestore = false;
-      boxes.forEach(b => {
-        if (b.location?.estanteriaId === estanteriaId && b.location?.baldaId === baldaId) {
-          const updatedBox = { ...b, location: { ...(b.location!), baldaName: newName } };
-          updatedBoxesState.push(updatedBox);
-          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, b.id);
-          batch.update(boxRef, { "location.baldaName": newName });
-          boxesUpdatedInFirestore = true;
-        } else {
-          updatedBoxesState.push(b);
-        }
-      });
-      if (boxesUpdatedInFirestore) await batch.commit();
-      setBoxes(updatedBoxesState);
-
-      if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
-        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
-      }
-      toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
-    } catch (error) {
-      console.error("Error actualizando nombre de balda:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el nombre de la balda.", variant: "destructive" });
+    if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaId) {
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     }
+    toast({ title: "Balda Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteBalda = async (estanteriaId: string, baldaIdToDelete: string) => {
-    if (!currentUser) return;
+  const handleDeleteBalda = (estanteriaId: string, baldaIdToDelete: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-    const balda = (estanteria.baldas || []).find(b => b.id === baldaIdToDelete);
+    const balda = (estanteria?.baldas || []).find(b => b.id === baldaIdToDelete);
     if (!balda) return;
 
-    const updatedBaldas = (estanteria.baldas || []).filter(b => b.id !== baldaIdToDelete);
-
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
+    setEstanterias(prevEstanterias =>
+      prevEstanterias.map(est =>
+        est.id === estanteriaId 
+          ? { ...est, baldas: (est.baldas || []).filter(b => b.id !== baldaIdToDelete) } 
+          : est
+      )
+    );
       
-      const batch = writeBatch(db);
-      let boxesNeedUpdate = false;
-      const updatedBoxesState = boxes.map(box => {
-        if (box.location?.estanteriaId === estanteriaId && box.location?.baldaId === baldaIdToDelete) {
-          boxesNeedUpdate = true;
-          const boxRef = doc(db, `users/${currentUser.uid}/boxes`, box.id);
-          batch.update(boxRef, { location: null });
-          return { ...box, location: null };
-        }
-        return box;
-      });
-      if (boxesNeedUpdate) await batch.commit();
-      setBoxes(updatedBoxesState);
+    setBoxes(prevBoxes =>
+      prevBoxes.map(box =>
+        (box.location?.estanteriaId === estanteriaId && box.location?.baldaId === baldaIdToDelete)
+          ? { ...box, location: null }
+          : box
+      )
+    );
       
-      setEstanterias(prevEstanterias =>
-        prevEstanterias.map(est =>
-          est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est
-        )
-      );
-      if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaIdToDelete) {
-        setSidebarSelection({ type: 'estanteria', id: estanteria.id, name: estanteria.name, estanteriaId: estanteria.id });
-      }
-      toast({ title: "Balda Eliminada", description: `La balda "${balda.name}" ha sido eliminada.`, variant: "destructive" });
-    } catch (error) {
-      console.error("Error eliminando balda:", error);
-      toast({ title: "Error", description: "No se pudo eliminar la balda.", variant: "destructive" });
+    if (sidebarSelection.type === 'balda' && sidebarSelection.id === baldaIdToDelete) {
+      setSidebarSelection({ type: 'estanteria', id: estanteria!.id, name: estanteria!.name, estanteriaId: estanteria!.id });
     }
+    toast({ title: "Balda Eliminada", description: `La balda "${balda.name}" ha sido eliminada.`, variant: "destructive" });
   };
 
-  // --- LOOSE ITEM Management on Balda ---
-  const handleAddLooseItemToBalda = async (estanteriaId: string, baldaId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
+  // --- LOOSE ITEM Management on Balda (localStorage) ---
+  const handleAddLooseItemToBalda = (estanteriaId: string, baldaId: string, itemData: Omit<Item, "id">) => {
     const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    const updatedBaldas = (estanteria.baldas || []).map(balda =>
-      balda.id === baldaId
-        ? { ...balda, looseItems: [...(balda.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) }
-        : balda
-    );
-    
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
-      toast({ title: "Objeto Añadido a Balda", description: `El objeto "${newItem.name}" ha sido añadido.` });
-    } catch (error) {
-      console.error("Error añadiendo objeto suelto a balda:", error);
-      toast({ title: "Error", description: "No se pudo añadir el objeto a la balda.", variant: "destructive" });
-    }
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, baldas: (est.baldas || []).map(balda => 
+            balda.id === baldaId 
+              ? { ...balda, looseItems: [...(balda.looseItems || []), newItem].sort((a,b)=>a.name.localeCompare(b.name)) } 
+              : balda
+          )} 
+        : est
+    ));
+    toast({ title: "Objeto Añadido a Balda", description: `El objeto "${newItem.name}" ha sido añadido.` });
   };
 
-  const handleUpdateLooseItemOnBalda = async (estanteriaId: string, baldaId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-
-    const updatedBaldas = (estanteria.baldas || []).map(balda =>
-      balda.id === baldaId
-        ? { ...balda, looseItems: (balda.looseItems || []).map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) }
-        : balda
-    );
-    
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
-      toast({ title: "Objeto de Balda Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-    } catch (error) {
-      console.error("Error actualizando objeto suelto en balda:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el objeto de la balda.", variant: "destructive" });
-    }
+  const handleUpdateLooseItemOnBalda = (estanteriaId: string, baldaId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, baldas: (est.baldas || []).map(balda => 
+            balda.id === baldaId 
+              ? { ...balda, looseItems: (balda.looseItems || []).map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) } 
+              : balda
+          )} 
+        : est
+    ));
+    toast({ title: "Objeto de Balda Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
   };
 
-  const handleDeleteLooseItemFromBalda = async (estanteriaId: string, baldaId: string, itemId: string) => {
-    if (!currentUser) return;
+  const handleDeleteLooseItemFromBalda = (estanteriaId: string, baldaId: string, itemId: string) => {
     const estanteria = estanterias.find(e => e.id === estanteriaId);
-    if (!estanteria) return;
-    const balda = (estanteria.baldas || []).find(b => b.id === baldaId);
+    const balda = (estanteria?.baldas || []).find(b => b.id === baldaId);
     const itemName = balda?.looseItems?.find(i => i.id === itemId)?.name || "El objeto seleccionado";
 
-    const updatedBaldas = (estanteria.baldas || []).map(b =>
-      b.id === baldaId
-        ? { ...b, looseItems: (b.looseItems || []).filter(item => item.id !== itemId) }
-        : b
-    );
-
-    try {
-      const estanteriaRef = doc(db, `users/${currentUser.uid}/estanterias`, estanteriaId);
-      await updateDoc(estanteriaRef, { baldas: updatedBaldas });
-      setEstanterias(prev => prev.map(est => est.id === estanteriaId ? { ...est, baldas: updatedBaldas } : est));
-      toast({ title: "Objeto Eliminado de Balda", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
-    } catch (error) {
-      console.error("Error eliminando objeto suelto de balda:", error);
-      toast({ title: "Error", description: "No se pudo eliminar el objeto de la balda.", variant: "destructive" });
-    }
+    setEstanterias(prev => prev.map(est => 
+      est.id === estanteriaId 
+        ? { ...est, baldas: (est.baldas || []).map(b => 
+            b.id === baldaId 
+              ? { ...b, looseItems: (b.looseItems || []).filter(item => item.id !== itemId) } 
+              : b
+          )} 
+        : est
+    ));
+    toast({ title: "Objeto Eliminado de Balda", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
   };
 
-  // --- BOX Management ---
-  const handleCreateBox = async (boxData: Omit<Box, "id" | "items" | "location">) => {
-    if (!currentUser) return;
-    const newBoxData: Omit<Box, "id"> = { ...boxData, items: [], location: null };
-    try {
-      const docRef = await addDoc(collection(db, `users/${currentUser.uid}/boxes`), newBoxData);
-      setBoxes(prev => [{ ...newBoxData, id: docRef.id }, ...prev].sort((a,b) => a.name.localeCompare(b.name)));
-      toast({ title: "Caja Creada", description: `La caja "${newBoxData.name}" ha sido creada.` });
-    } catch (error) {
-      console.error("Error creando caja:", error);
-      toast({ title: "Error", description: "No se pudo crear la caja.", variant: "destructive" });
-    }
+  // --- BOX Management (localStorage) ---
+  const handleCreateBox = (boxData: Omit<Box, "id" | "items" | "location">) => {
+    const newBox: Box = { ...boxData, id: crypto.randomUUID(), items: [], location: null };
+    setBoxes(prev => [...prev, newBox].sort((a,b) => a.name.localeCompare(b.name)));
+    toast({ title: "Caja Creada", description: `La caja "${newBox.name}" ha sido creada.` });
   };
 
-  const handleUpdateBoxName = async (boxId: string, newName: string) => {
-    if (!currentUser) return;
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { name: newName });
-      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, name: newName } : b).sort((a,b) => a.name.localeCompare(b.name)));
-      if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
-        setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
-      }
-      toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
-    } catch (error) {
-      console.error("Error actualizando nombre de caja:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el nombre de la caja.", variant: "destructive" });
+  const handleUpdateBoxName = (boxId: string, newName: string) => {
+    setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, name: newName } : b).sort((a,b) => a.name.localeCompare(b.name)));
+    if (sidebarSelection.type === 'box' && sidebarSelection.id === boxId) {
+      setSidebarSelection(prev => ({ ...(prev as any), name: newName }));
     }
+    toast({ title: "Caja Actualizada", description: `Nombre cambiado a "${newName}".` });
   };
 
-  const handleDeleteBox = async (boxIdToDelete: string) => {
-    if (!currentUser) return;
+  const handleDeleteBox = (boxIdToDelete: string) => {
     const boxName = boxes.find(b => b.id === boxIdToDelete)?.name || "La caja seleccionada";
-    try {
-      await deleteDoc(doc(db, `users/${currentUser.uid}/boxes`, boxIdToDelete));
-      setBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxIdToDelete));
-      if (sidebarSelection.type === 'box' && sidebarSelection.id === boxIdToDelete) {
-        setSidebarSelection({ type: 'all-boxes' });
-      }
-      toast({ title: "Caja Eliminada", description: `La caja "${boxName}" y todos sus objetos han sido eliminados.`, variant: "destructive" });
-    } catch (error) {
-      console.error("Error eliminando caja:", error);
-      toast({ title: "Error", description: "No se pudo eliminar la caja.", variant: "destructive" });
+    setBoxes(prevBoxes => prevBoxes.filter(box => box.id !== boxIdToDelete));
+    if (sidebarSelection.type === 'box' && sidebarSelection.id === boxIdToDelete) {
+      setSidebarSelection({ type: 'all-boxes' });
     }
+    toast({ title: "Caja Eliminada", description: `La caja "${boxName}" y todos sus objetos han sido eliminados.`, variant: "destructive" });
   };
 
-  const handleAddItemToBox = async (boxId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const box = boxes.find(b => b.id === boxId);
-    if (!box) return;
-
+  const handleAddItemToBox = (boxId: string, itemData: Omit<Item, "id">) => {
     const newItem: Item = { ...itemData, id: crypto.randomUUID() };
-    const updatedItems = [...box.items, newItem].sort((a,b)=>a.name.localeCompare(b.name));
-    
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { items: updatedItems });
-      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
-      toast({ title: "Objeto Añadido a Caja", description: `El objeto "${newItem.name}" ha sido añadido.` });
-    } catch (error) {
-      console.error("Error añadiendo objeto a caja:", error);
-      toast({ title: "Error", description: "No se pudo añadir el objeto a la caja.", variant: "destructive" });
-    }
+    setBoxes(prev => prev.map(b => 
+      b.id === boxId 
+        ? { ...b, items: [...b.items, newItem].sort((a,b)=>a.name.localeCompare(b.name)) } 
+        : b
+    ));
+    toast({ title: "Objeto Añadido a Caja", description: `El objeto "${newItem.name}" ha sido añadido.` });
   };
   
-  const handleUpdateItemInBox = async (boxId: string, itemId: string, itemData: Omit<Item, "id">) => {
-    if (!currentUser) return;
-    const box = boxes.find(b => b.id === boxId);
-    if (!box) return;
-
-    const updatedItems = box.items
-      .map(item => item.id === itemId ? { ...item, ...itemData } : item)
-      .sort((a,b)=>a.name.localeCompare(b.name));
-      
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { items: updatedItems });
-      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
-      toast({ title: "Objeto de Caja Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
-    } catch (error) {
-      console.error("Error actualizando objeto en caja:", error);
-      toast({ title: "Error", description: "No se pudo actualizar el objeto de la caja.", variant: "destructive" });
-    }
+  const handleUpdateItemInBox = (boxId: string, itemId: string, itemData: Omit<Item, "id">) => {
+    setBoxes(prev => prev.map(b => 
+      b.id === boxId 
+        ? { ...b, items: b.items.map(item => item.id === itemId ? { ...item, ...itemData } : item).sort((a,b)=>a.name.localeCompare(b.name)) } 
+        : b
+    ));
+    toast({ title: "Objeto de Caja Actualizado", description: `El objeto "${itemData.name}" ha sido actualizado.` });
   };
 
-  const handleDeleteItemFromBox = async (boxId: string, itemId: string) => {
-    if (!currentUser) return;
+  const handleDeleteItemFromBox = (boxId: string, itemId: string) => {
     const box = boxes.find(b => b.id === boxId);
-    if (!box) return;
-    const itemName = box.items.find(i => i.id === itemId)?.name || "El objeto seleccionado";
-    const updatedItems = box.items.filter(i => i.id !== itemId);
-
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { items: updatedItems });
-      setBoxes(prev => prev.map(b => b.id === boxId ? { ...b, items: updatedItems } : b));
-      toast({ title: "Objeto de Caja Eliminado", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
-    } catch (error) {
-      console.error("Error eliminando objeto de caja:", error);
-      toast({ title: "Error", description: "No se pudo eliminar el objeto de la caja.", variant: "destructive" });
-    }
+    const itemName = box?.items.find(i => i.id === itemId)?.name || "El objeto seleccionado";
+    setBoxes(prev => prev.map(b => 
+      b.id === boxId 
+        ? { ...b, items: b.items.filter(i => i.id !== itemId) } 
+        : b
+    ));
+    toast({ title: "Objeto de Caja Eliminado", description: `El objeto "${itemName}" ha sido eliminado.`, variant: "destructive" });
   };
 
-  // --- BOX Assignment to Location ---
-  const handleAssignBoxToLocation = async (boxId: string, estanteriaId: string, baldaId?: string | null) => {
-    if (!currentUser) return;
+  // --- BOX Assignment to Location (localStorage) ---
+  const handleAssignBoxToLocation = (boxId: string, estanteriaId: string, baldaId?: string | null) => {
     const estanteria = estanterias.find(e => e.id === estanteriaId);
     if (!estanteria) {
         toast({ title: "Error", description: "Estantería no encontrada.", variant: "destructive"});
@@ -591,37 +365,22 @@ export default function HomePage() {
       locationDescription = `${estanteria.name} (directo)`;
     }
 
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { location: locationData });
-      setBoxes(prevBoxes =>
-        prevBoxes.map(box =>
-          box.id === boxId ? { ...box, location: locationData } : box
-        )
-      );
-      toast({ title: "Caja Asignada", description: `La caja "${boxToAssign.name}" ha sido asignada a ${locationDescription}.` });
-    } catch (error) {
-      console.error("Error asignando caja:", error);
-      toast({ title: "Error", description: "No se pudo asignar la caja.", variant: "destructive" });
-    }
+    setBoxes(prevBoxes =>
+      prevBoxes.map(box =>
+        box.id === boxId ? { ...box, location: locationData } : box
+      )
+    );
+    toast({ title: "Caja Asignada", description: `La caja "${boxToAssign.name}" ha sido asignada a ${locationDescription}.` });
   };
 
-  const handleUnassignBox = async (boxId: string) => {
-    if (!currentUser) return;
+  const handleUnassignBox = (boxId: string) => {
     const boxToUnassign = boxes.find(b => b.id === boxId);
     if (!boxToUnassign) return;
 
-    try {
-      const boxRef = doc(db, `users/${currentUser.uid}/boxes`, boxId);
-      await updateDoc(boxRef, { location: null });
-      setBoxes(prevBoxes =>
-        prevBoxes.map(box => (box.id === boxId ? { ...box, location: null } : box))
-      );
-      toast({ title: "Caja Desasignada", description: `La caja "${boxToUnassign.name}" ahora está sin ubicar.` });
-    } catch (error) {
-      console.error("Error desasignando caja:", error);
-      toast({ title: "Error", description: "No se pudo desasignar la caja.", variant: "destructive" });
-    }
+    setBoxes(prevBoxes =>
+      prevBoxes.map(box => (box.id === boxId ? { ...box, location: null } : box))
+    );
+    toast({ title: "Caja Desasignada", description: `La caja "${boxToUnassign.name}" ahora está sin ubicar.` });
   };
 
   // Memoized sorted lists
@@ -753,17 +512,13 @@ export default function HomePage() {
   }, [sortedBoxes, filter]);
 
   const handleExportPDF = () => {
-    if (!currentUser) {
-        toast({title: "Acción no permitida", description: "Debes iniciar sesión para exportar el inventario.", variant: "destructive"});
-        return;
-    }
     const doc = new jsPDF();
     let yPosition = 15;
     const pageHeight = doc.internal.pageSize.height;
     const bottomMargin = 15;
 
     doc.setFontSize(18);
-    doc.text(`Inventario de ${currentUser.displayName || currentUser.email}`, doc.internal.pageSize.width / 2, yPosition, { align: "center" });
+    doc.text(`Inventario de Trastero`, doc.internal.pageSize.width / 2, yPosition, { align: "center" });
     yPosition += 12;
 
     if (sortedEstanterias.length > 0) {
@@ -902,7 +657,7 @@ export default function HomePage() {
             }
             yPosition += 5;
         });
-    } else if (sortedBoxes.length > 0) { // Only show this if there are boxes in general, but all are assigned
+    } else if (sortedBoxes.length > 0) { 
         doc.setFontSize(12);
         doc.setFont(undefined, 'italic');
         doc.text("Todas las cajas están ubicadas.", 15, yPosition);
@@ -934,29 +689,8 @@ export default function HomePage() {
 
 
   const renderContent = () => {
-    if (!currentUser) {
-      return (
-        <div className="text-center py-20">
-          <PackageSearch className="mx-auto h-24 w-24 text-muted-foreground mb-6" />
-          <h2 className="text-3xl font-semibold text-foreground mb-4">Bienvenido al Gestor de Trasteros</h2>
-          <p className="text-lg text-muted-foreground mb-8">Por favor, inicia sesión con Google para guardar y acceder a tu inventario.</p>
-          <Button size="lg" onClick={handleSignIn}>
-            <LogIn className="mr-2 h-5 w-5" />
-            Iniciar Sesión con Google
-          </Button>
-        </div>
-      );
-    }
-    if (loadingData) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Cargando datos de tu trastero...</p>
-        </div>
-      );
-    }
-    // If data is loaded but both estanterias and boxes are empty, it might be a new user.
-    if (currentUser && !loadingData && estanterias.length === 0 && boxes.length === 0 && sidebarSelection.type === 'all-estanterias' && !filter) {
+    // Removed Firebase loading and auth checks
+    if (estanterias.length === 0 && boxes.length === 0 && sidebarSelection.type === 'all-estanterias' && !filter) {
       return (
          <div className="text-center py-12">
             <PackageSearch className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
@@ -974,7 +708,7 @@ export default function HomePage() {
     if (sidebarSelection.type === 'box') {
       const box = sortedBoxes.find(b => b.id === sidebarSelection.id);
       if (!box) return <p>Caja no encontrada.</p>;
-      const originalBox = boxes.find(b=>b.id === box.id); // Find original for total item count
+      const originalBox = boxes.find(b=>b.id === box.id); 
       return (
         <BoxCard
           key={box.id}
@@ -1335,7 +1069,7 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Package className="mr-2 h-4 w-4" />Objetos Sueltos Directos:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {estLooseItems.map(item => ( // Removed slice for simplicity
+                            {estLooseItems.map(item => (
                               <li key={item.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'estanteria', id: est.id, estanteriaId: est.id, name: est.name })}>
                                   {item.name}
@@ -1351,7 +1085,7 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Archive className="mr-2 h-4 w-4" />Cajas Directas:</h4>
                           <ul className="list-disc list-inside pl-4 text-xs">
-                            {directBoxes.map(box => ( // Removed slice for simplicity
+                            {directBoxes.map(box => ( 
                               <li key={box.id} className="truncate">
                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
                                   {box.name}
@@ -1366,7 +1100,7 @@ export default function HomePage() {
                         <div>
                           <h4 className="font-medium text-muted-foreground flex items-center"><Layers className="mr-2 h-4 w-4" />Baldas:</h4>
                           <div className="space-y-2 pl-2">
-                            {estBaldas.map(balda => { // Removed slice for simplicity
+                            {estBaldas.map(balda => { 
                               const boxesOnBalda = sortedBoxes.filter(b => b.location?.baldaId === balda.id && b.location?.estanteriaId === est.id);
                               const baldaLooseItems = (balda.looseItems || []);
                               return (
@@ -1378,7 +1112,7 @@ export default function HomePage() {
                                     <>
                                       {baldaLooseItems.length > 0 && (
                                         <ul className="list-disc list-inside pl-6 text-xs">
-                                          {baldaLooseItems.map(item => ( // Removed slice for simplicity
+                                          {baldaLooseItems.map(item => (
                                             <li key={item.id} className="truncate">
                                               <Package className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
                                               {item.name}
@@ -1389,7 +1123,7 @@ export default function HomePage() {
                                       )}
                                       {boxesOnBalda.length > 0 && (
                                         <ul className="list-disc list-inside pl-6 text-xs">
-                                          {boxesOnBalda.map(box => ( // Removed slice for simplicity
+                                          {boxesOnBalda.map(box => ( 
                                             <li key={box.id} className="truncate">
                                                 <Archive className="inline-block mr-1 h-3 w-3 align-middle text-muted-foreground/70"/>
                                                 <Button variant="link" size="sm" className="p-0 h-auto text-xs inline" onClick={() => setSidebarSelection({ type: 'box', id: box.id, name: box.name })}>
@@ -1485,12 +1219,7 @@ export default function HomePage() {
   return (
     <SidebarProvider>
       <div className="flex flex-col min-h-screen">
-        <Header 
-          currentUser={currentUser} 
-          loadingAuth={loadingAuth}
-          handleSignIn={handleSignIn}
-          handleSignOut={handleSignOut}
-        />
+        <Header /> {/* Removed Firebase props */}
         <div className="flex flex-1">
           <Sidebar side="left" collapsible="icon" className="border-r">
             <SidebarHeader className="p-2 flex justify-between items-center">
@@ -1511,38 +1240,34 @@ export default function HomePage() {
                   <SidebarTrigger className="md:hidden" />
                   <h1 className="text-3xl font-bold text-foreground">{pageTitle}</h1>
                 </div>
-                 {currentUser && (
-                  <div className="flex flex-wrap gap-2 items-center">
-                    {(sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || (sidebarSelection.type === 'all-estanterias' && filteredUnassignedBoxes.length > 0)) && (
-                        <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
-                            {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
-                            {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
-                        </Button>
-                    )}
-                    <Button variant="outline" onClick={handleExportPDF}>
-                        <FileDown className="mr-2 h-4 w-4" />
-                        Exportar Inventario
-                    </Button>
-                    {sidebarSelection.type === 'all-estanterias' && <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />}
-                    { (sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || sidebarSelection.type === 'all-estanterias') && <CreateBoxDialog onCreateBox={handleCreateBox} />}
-                  </div>
-                 )}
+                <div className="flex flex-wrap gap-2 items-center">
+                  {(sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || (sidebarSelection.type === 'all-estanterias' && filteredUnassignedBoxes.length > 0)) && (
+                      <Button variant="outline" onClick={() => setViewMode(prev => prev === 'card' ? 'list' : 'card')}>
+                          {viewMode === 'card' ? <List className="mr-2 h-4 w-4" /> : <LayoutGrid className="mr-2 h-4 w-4" />}
+                          {viewMode === 'card' ? 'Ver como Lista' : 'Ver como Tarjetas'}
+                      </Button>
+                  )}
+                  <Button variant="outline" onClick={handleExportPDF}>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Exportar Inventario
+                  </Button>
+                  {sidebarSelection.type === 'all-estanterias' && <CreateEstanteriaDialog onCreateEstanteria={handleCreateEstanteria} />}
+                  { (sidebarSelection.type === 'all-boxes' || sidebarSelection.type === 'unassigned-boxes' || sidebarSelection.type === 'all-estanterias') && <CreateBoxDialog onCreateBox={handleCreateBox} />}
+                </div>
               </div>
 
-              {currentUser && (
-                <div className="mb-8">
-                  <div className="relative">
-                    <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder={currentFilterPlaceholder}
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      className="pl-10 w-full text-base"
-                    />
-                  </div>
+              <div className="mb-8">
+                <div className="relative">
+                  <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder={currentFilterPlaceholder}
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="pl-10 w-full text-base"
+                  />
                 </div>
-              )}
+              </div>
               
               {renderContent()}
 
@@ -1556,6 +1281,3 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
-
-
-  
