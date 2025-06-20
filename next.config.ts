@@ -6,12 +6,15 @@ import type {NextConfig} from 'next';
 // entonces REPO_NAME debería ser '/gestor-trasteros'.
 // Si estás desplegando un sitio de usuario/organización (ej. tu-usuario.github.io),
 // entonces REPO_NAME debería ser una cadena vacía ''.
-// const REPO_NAME = '/trastero'; // TEMPORALMENTE COMENTADO PARA DESARROLLO EN EDITOR
+
+// Para desarrollo en Firebase Studio o local, mantén estas líneas comentadas.
+// Para DESPLEGAR A GITHUB PAGES, DESCOMENTA las siguientes 3 líneas y asegúrate que REPO_NAME es correcto.
+// const REPO_NAME = '/trastero'; // Ejemplo: '/tu-repositorio-github'
 
 const nextConfig: NextConfig = {
   output: 'export', // Necesario para generar un sitio estático para GitHub Pages
-  // basePath: REPO_NAME, // TEMPORALMENTE COMENTADO PARA DESARROLLO EN EDITOR
-  // assetPrefix: REPO_NAME ? `${REPO_NAME}/` : undefined, // TEMPORALMENTE COMENTADO PARA DESARROLLO EN EDITOR
+  // basePath: REPO_NAME, // DESCOMENTAR PARA GITHUB PAGES
+  // assetPrefix: REPO_NAME ? `${REPO_NAME}/` : undefined, // DESCOMENTAR PARA GITHUB PAGES
   images: {
     unoptimized: true, // Desactiva la optimización de imágenes de Next.js para exportación estática
     remotePatterns: [
