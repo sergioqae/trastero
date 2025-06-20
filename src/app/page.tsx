@@ -1011,8 +1011,18 @@ export default function HomePage() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
-                        <CardDescription className="pt-1 text-xs">
-                          {(est.looseItems || []).length} obj. suelto(s) directo(s), {directBoxes.length} caja(s) directa(s), {(est.baldas || []).length} balda(s).
+                        <CardDescription className="pt-1 text-xs flex items-center space-x-1.5">
+                          <span className="flex items-center" title={`${estLooseItems.length} objeto(s) suelto(s) directo(s)`}>
+                            {estLooseItems.length} <Package className="ml-0.5 h-3 w-3 text-muted-foreground" />
+                          </span>
+                          <span className="text-muted-foreground/50">|</span>
+                          <span className="flex items-center" title={`${directBoxes.length} caja(s) directa(s)`}>
+                            {directBoxes.length} <Archive className="ml-0.5 h-3 w-3 text-muted-foreground" />
+                          </span>
+                          <span className="text-muted-foreground/50">|</span>
+                          <span className="flex items-center" title={`${estBaldas.length} balda(s)`}>
+                            {estBaldas.length} <Layers className="ml-0.5 h-3 w-3 text-muted-foreground" />
+                          </span>
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow space-y-3 pt-3 text-sm">
