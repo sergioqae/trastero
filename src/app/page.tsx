@@ -482,17 +482,17 @@ export default function HomePage() {
       sortedEstanterias.forEach(est => {
         if (yPosition > pageHeight - bottomMargin - 30) { doc.addPage(); yPosition = 15; }
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
+        doc.setFont(doc.getFont().fontName, 'bold');
         doc.text(`Estantería: ${est.name}`, 15, yPosition);
         yPosition += 7;
-        doc.setFont(undefined, 'normal');
+        doc.setFont(doc.getFont().fontName, 'normal');
         doc.setFontSize(10);
 
         const estLooseItems = (est.looseItems || []).sort((a,b)=>a.name.localeCompare(b.name));
         if (estLooseItems.length > 0) {
-          doc.setFont(undefined, 'bold');
+          doc.setFont(doc.getFont().fontName, 'bold');
           doc.text("  Objetos Sueltos (en Estantería):", 20, yPosition); yPosition += 5;
-          doc.setFont(undefined, 'normal');
+          doc.setFont(doc.getFont().fontName, 'normal');
           estLooseItems.forEach(item => {
             if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
             doc.text(`    - ${item.name}${item.description ? ` (${item.description})` : ''} ${item.borrowedTo ? `(Prestado a: ${item.borrowedTo})` : '(Disponible)'}`, 25, yPosition);
@@ -502,9 +502,9 @@ export default function HomePage() {
         
         const boxesDirectlyOnEstanteria = sortedBoxes.filter(box => box.location?.estanteriaId === est.id && !box.location?.baldaId).sort((a,b)=>a.name.localeCompare(b.name));
         if (boxesDirectlyOnEstanteria.length > 0) {
-          doc.setFont(undefined, 'bold');
+          doc.setFont(doc.getFont().fontName, 'bold');
           doc.text("  Cajas (en Estantería):", 20, yPosition); yPosition += 5;
-          doc.setFont(undefined, 'normal');
+          doc.setFont(doc.getFont().fontName, 'normal');
           boxesDirectlyOnEstanteria.forEach(box => {
             if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
             doc.text(`    Caja: ${box.name}`, 25, yPosition); yPosition += 5;
@@ -514,25 +514,25 @@ export default function HomePage() {
               yPosition += 5;
             });
             if (box.items.length === 0) {
-                doc.setFont(undefined, 'italic');
+                doc.setFont(doc.getFont().fontName, 'italic');
                 doc.text(`      (Esta caja está vacía)`, 30, yPosition); yPosition += 5;
-                doc.setFont(undefined, 'normal');
+                doc.setFont(doc.getFont().fontName, 'normal');
             }
           });
         }
 
         const estBaldas = (est.baldas || []).sort((a,b) => a.name.localeCompare(b.name));
         if (estBaldas.length > 0) {
-          doc.setFont(undefined, 'bold');
+          doc.setFont(doc.getFont().fontName, 'bold');
           doc.text("  Baldas:", 20, yPosition); yPosition += 5;
-          doc.setFont(undefined, 'normal');
+          doc.setFont(doc.getFont().fontName, 'normal');
           estBaldas.forEach(balda => {
             if (yPosition > pageHeight - bottomMargin - 20) { doc.addPage(); yPosition = 15; }
             doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
+            doc.setFont(doc.getFont().fontName, 'bold');
             doc.text(`    Balda: ${balda.name}`, 25, yPosition);
             yPosition += 6;
-            doc.setFont(undefined, 'normal');
+            doc.setFont(doc.getFont().fontName, 'normal');
             doc.setFontSize(10);
             const baldaLooseItems = (balda.looseItems || []).sort((a,b)=> a.name.localeCompare(b.name));
             if (baldaLooseItems.length > 0) {
@@ -555,32 +555,32 @@ export default function HomePage() {
                   yPosition += 5;
                 });
                  if (box.items.length === 0) {
-                    doc.setFont(undefined, 'italic');
+                    doc.setFont(doc.getFont().fontName, 'italic');
                     doc.text(`          (Esta caja está vacía)`, 40, yPosition); yPosition += 5;
-                    doc.setFont(undefined, 'normal');
+                    doc.setFont(doc.getFont().fontName, 'normal');
                 }
               });
             }
             if (baldaLooseItems.length === 0 && boxesOnThisBalda.length === 0) {
-              doc.setFont(undefined, 'italic');
+              doc.setFont(doc.getFont().fontName, 'italic');
               doc.text("      (Esta balda está vacía)", 30, yPosition); yPosition += 5;
-              doc.setFont(undefined, 'normal');
+              doc.setFont(doc.getFont().fontName, 'normal');
             }
           });
         }
          if (estLooseItems.length === 0 && boxesDirectlyOnEstanteria.length === 0 && estBaldas.length === 0) {
-            doc.setFont(undefined, 'italic');
+            doc.setFont(doc.getFont().fontName, 'italic');
             doc.text("  (Esta estantería está vacía)", 20, yPosition); yPosition += 5;
-            doc.setFont(undefined, 'normal');
+            doc.setFont(doc.getFont().fontName, 'normal');
         }
         yPosition += 5; 
       });
     } else {
       doc.setFontSize(12);
-      doc.setFont(undefined, 'italic');
+      doc.setFont(doc.getFont().fontName, 'italic');
       doc.text("No hay estanterías definidas.", 15, yPosition);
       yPosition += 7;
-      doc.setFont(undefined, 'normal');
+      doc.setFont(doc.getFont().fontName, 'normal');
     }
     
     yPosition += 7;
@@ -593,10 +593,10 @@ export default function HomePage() {
         unassignedBoxes.forEach(box => {
             if (yPosition > pageHeight - bottomMargin - 20) { doc.addPage(); yPosition = 15; }
             doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
+            doc.setFont(doc.getFont().fontName, 'bold');
             doc.text(`Caja: ${box.name}`, 15, yPosition);
             yPosition += 7;
-            doc.setFont(undefined, 'normal');
+            doc.setFont(doc.getFont().fontName, 'normal');
             doc.setFontSize(10);
             if (box.items.length > 0) {
                 box.items.forEach(item => {
@@ -605,25 +605,25 @@ export default function HomePage() {
                     yPosition += 5;
                 });
             } else {
-                doc.setFont(undefined, 'italic');
+                doc.setFont(doc.getFont().fontName, 'italic');
                 doc.text("  (Esta caja está vacía)", 20, yPosition); yPosition += 5;
-                doc.setFont(undefined, 'normal');
+                doc.setFont(doc.getFont().fontName, 'normal');
             }
             yPosition += 5;
         });
     } else if (sortedBoxes.length > 0) { 
         doc.setFontSize(12);
-        doc.setFont(undefined, 'italic');
+        doc.setFont(doc.getFont().fontName, 'italic');
         doc.text("Todas las cajas están ubicadas.", 15, yPosition);
         yPosition += 7;
-        doc.setFont(undefined, 'normal');
+        doc.setFont(doc.getFont().fontName, 'normal');
     }
 
 
     if (sortedEstanterias.length === 0 && sortedBoxes.length === 0) {
         if (yPosition > pageHeight - bottomMargin - 10) { doc.addPage(); yPosition = 15; }
         doc.setFontSize(12);
-        doc.setFont(undefined, 'italic');
+        doc.setFont(doc.getFont().fontName, 'italic');
         doc.text("El trastero está completamente vacío.", 15, yPosition);
         yPosition += 7;
     }
@@ -1243,3 +1243,4 @@ export default function HomePage() {
     </SidebarProvider>
   );
 }
+
