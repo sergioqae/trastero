@@ -9,12 +9,12 @@ import type {NextConfig} from 'next';
 
 // Para desarrollo en Firebase Studio o local, mantén estas líneas comentadas.
 // Para DESPLEGAR A GITHUB PAGES, DESCOMENTA las siguientes 3 líneas y asegúrate que REPO_NAME es correcto.
-// const REPO_NAME = '/trastero'; // Ejemplo: '/tu-repositorio-github'
+const REPO_NAME = '/trastero'; // Ejemplo: '/tu-repositorio-github'
 
 const nextConfig: NextConfig = {
   output: 'export', // Necesario para generar un sitio estático para GitHub Pages
-  // basePath: REPO_NAME, // DESCOMENTAR PARA GITHUB PAGES
-  // assetPrefix: REPO_NAME ? `${REPO_NAME}/` : undefined, // DESCOMENTAR PARA GITHUB PAGES
+  basePath: REPO_NAME, // DESCOMENTAR PARA GITHUB PAGES
+  assetPrefix: REPO_NAME ? `${REPO_NAME}/` : undefined, // DESCOMENTAR PARA GITHUB PAGES
   images: {
     unoptimized: true, // Desactiva la optimización de imágenes de Next.js para exportación estática
     remotePatterns: [
@@ -28,6 +28,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: [
      'https://6000-firebase-studio-1747815302284.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
+     'https://*.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev'
   ],
 };
 
