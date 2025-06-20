@@ -23,12 +23,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // typescript: { // Temporalmente comentado
+  //   ignoreBuildErrors: true,
+  // },
+  // eslint: { // Temporalmente comentado
+  //   ignoreDuringBuilds: true,
+  // },
   // allowedDevOrigins ya no es necesario aquí porque es para `next dev`
   // y no afecta la construcción para producción ni el despliegue estático.
   // Si lo necesitas para tu entorno de desarrollo local/en la nube, mantenlo,
