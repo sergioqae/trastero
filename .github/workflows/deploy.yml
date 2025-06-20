@@ -1,3 +1,4 @@
+
 name: Deploy Next.js site to GitHub Pages
 
 on:
@@ -37,6 +38,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./out
+          force_orphan: true # Asegura una rama gh-pages limpia en cada despliegue
           # La acción peaceiris/actions-gh-pages desplegará el contenido de ./out
           # a la rama 'gh-pages' de tu repositorio.
           # Luego necesitarás configurar GitHub Pages en tu repositorio
