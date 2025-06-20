@@ -6,7 +6,7 @@ import type {NextConfig} from 'next';
 // entonces REPO_NAME debería ser '/gestor-trasteros'.
 // Si estás desplegando un sitio de usuario/organización (ej. tu-usuario.github.io),
 // entonces REPO_NAME debería ser una cadena vacía ''.
-const REPO_NAME = '/NOMBRE_DE_TU_REPOSITORIO'; // CAMBIA ESTO
+const REPO_NAME = '/trastero'; // CAMBIADO AL NOMBRE DE TU REPOSITORIO
 
 const nextConfig: NextConfig = {
   output: 'export', // Necesario para generar un sitio estático para GitHub Pages
@@ -34,9 +34,9 @@ const nextConfig: NextConfig = {
   // Si lo necesitas para tu entorno de desarrollo local/en la nube, mantenlo,
   // pero asegúrate de que la URL que pusiste anteriormente sea correcta para ese entorno.
   // Para el despliegue en GitHub Pages, no tiene efecto.
-  // allowedDevOrigins: [
-  //   'https://6000-firebase-studio-1747815302284.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
-  // ],
+  allowedDevOrigins: [
+     'https://6000-firebase-studio-1747815302284.cluster-6vyo4gb53jczovun3dxslzjahs.cloudworkstations.dev',
+  ],
 };
 
 export default nextConfig;
