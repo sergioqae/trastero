@@ -1,0 +1,41 @@
+name: Deploy Next.js site to GitHub Pages
+
+on:
+  push:
+    branches: ["main"] # Cambia esto si tu rama principal tiene otro nombre (ej. master)
+  workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions en GitHub
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # O la versión de Node.js que prefieras/necesites
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci # Usa 'npm ci' para instalaciones más rápidas y reproducibles en CI
+
+      - name: Build Next.js application
+        run: npm run build 
+        # El comando 'npm run build' utilizará la configuración de next.config.js,
+        # incluyendo basePath y assetPrefix que son cruciales para GitHub Pages.
+
+      - name: Add .nojekyll file
+        run: touch ./out/.nojekyll
+        # Este archivo evita que GitHub Pages intente procesar el sitio con Jekyll.
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          # La acción peaceiris/actions-gh-pages desplegará el contenido de ./out
+          # a la rama 'gh-pages' de tu repositorio.
+          # Luego necesitarás configurar GitHub Pages en tu repositorio
+          # para servir desde la rama 'gh-pages'.
