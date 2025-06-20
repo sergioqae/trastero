@@ -3,10 +3,12 @@ name: Deploy Next.js site to GitHub Pages
 on:
   push:
     branches: ["main"] # Cambia esto si tu rama principal tiene otro nombre (ej. master)
-  workflow_dispatch: # Permite ejecutar este workflow manualmente desde la pestaña Actions en GitHub
+  workflow_dispatch: # Permite ejecutar este workflow manually desde la pestaña Actions en GitHub
 
 jobs:
   build-and-deploy:
+    permissions:
+      contents: write # Added to grant write permissions to the GITHUB_TOKEN
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
